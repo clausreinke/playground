@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+
+<head>
+<script src="sudoku.js"></script>
+<style type="text/css">
+#grid { font-size: small }
+.digit { position: absolute; padding-left: 0.25em; color: grey }
+.digit[id$="1"] { left:0em; top:0em }
+.digit[id$="2"] { left:1em; top:0em }
+.digit[id$="3"] { left:2em; top:0em }
+.digit[id$="4"] { left:0em; top:1em }
+.digit[id$="5"] { left:1em; top:1em }
+.digit[id$="6"] { left:2em; top:1em }
+.digit[id$="7"] { left:0em; top:2em }
+.digit[id$="8"] { left:1em; top:2em }
+.digit[id$="9"] { left:2em; top:2em }
+.box   { position: relative; float: left; height: 3em; width: 3em; }
+.box[id*="-b0"] { border-top-style: solid; border-top-width: 2px }
+.box[id*="-b8"] { border-bottom-style: solid; border-bottom-width: 2px }
+.box[id$="0"] { border-left-style: solid; border-left-width: 2px }
+.box[id$="8"] { border-right-style: solid; border-right-width: 2px }
+.box[id$="0"],.box[id$="1"],
+.box[id$="3"],.box[id$="4"],
+.box[id$="6"],.box[id$="7"]
+  { border-right-style: dotted; border-right-width: 1px }
+.box[id*="-b0"],.box[id*="-b1"],
+.box[id*="-b3"],.box[id*="-b4"],
+.box[id*="-b6"],.box[id*="-b7"]
+  { border-bottom-style: dotted; border-bottom-width: 1px }
+.box[id$="2"],.box[id$="5"]
+  { border-right-style: solid; border-right-width: 2px }
+.box[id*="-b2"],.box[id*="-b5"]
+  { border-bottom-style: solid; border-bottom-width: 2px }
+.box .singleton  { text-align: center;
+                   font-weight: bold; font-size: large }
+.line { clear: both }
+.current { background-color: lightblue }
+
+.button  { float: left; height: 3em; width: 2.7em;
+           border-left: thin solid; border-bottom: thin solid; }
+.button.undo { background-color: red }
+.button.undo div { font-size: larger; text-align: center }
+.button.set { background-color: lightgreen }
+.button.unmark { background-color: lightblue; position: relative; clear: both }
+.button.toggle { background-color: lightblue; position: relative }
+.button[id$="9"]  { border-right: thin solid }
+.button.set div { text-align: center; font-size: larger }
+#buttons { font-size: small; font-weight: bold; clear: both }
+</style>
+</head>
+
+<body>
+<div id="grid"></div>
+<div id="buttons"></div>
+<script>
+var grid = new Grid("grid");
+
+function setCurrent(n) {
+  console.log(grid.set(grid.current.row,grid.current.col,n));
+  displayGrid(grid);
+}
+
+function undo(f) { grid.undo(f); displayGrid(grid); }
+
+function toggleCurrent(d) { grid.toggleCurrent(d); displayGrid(grid); }
+
+function move(event) {
+  switch (event.keyCode) {
+    // digits
+    case 49: setCurrent(1); return;
+    case 50: setCurrent(2); return;
+    case 51: setCurrent(3); return;
+    case 52: setCurrent(4); return;
+    case 53: setCurrent(5); return;
+    case 54: setCurrent(6); return;
+    case 55: setCurrent(7); return;
+    case 56: setCurrent(8); return;
+    case 57: setCurrent(9); return;
+    // arrows
+    case 37: grid.moveBy(0,-1); break;
+    case 39: grid.moveBy(0,1); break;
+    case 38: grid.moveBy(-1,0); break;
+    case 40: grid.moveBy(1,0); break;
+  }
+  displayGrid(grid);
+}
+function focus(event) {
+  var coord;
+  console.log("focus",event);
+  if (event.target.className.indexOf("box")!==-1) {
+    coord = /grid-b(\d)(\d)/.exec(event.target.id);
+  } else if (event.target.parentNode.className.indexOf("box")!==-1) {
+    coord = /grid-b(\d)(\d)/.exec(event.target.parentNode.id);
+  } else
+    return;
+  grid.moveTo(+coord[1],+coord[2]);
+  displayGrid(grid);
+}
+document.addEventListener("keydown",move,false);
+document.getElementById("grid").addEventListener("mousedown",focus,false);
+
+(function(){
+var row, buttons = document.getElementById("buttons");
+
+function digits(n,ns) {
+  var ds = "";
+  for(var d=1; d<10; d++)
+    ds += '<span class="digit" id="toggle-'+n+d+'">'
+          +(ns.indexOf(d)!==-1?d:'.')+'</span>';
+  return ds;
+}
+
+buttons.innerHTML +=
+  '<div class="button undo" onmousedown="undo()">'
+ +'<div>&lt;</div></div>';
+for (row=1; row<10; row++)
+  buttons.innerHTML +=
+    '<div class="button set" id="set-'+row+'" onmousedown="setCurrent('+row+')">'
+   +'<div>'+row+'</div></div>';
+buttons.innerHTML +=
+  '<div class="button unmark" onmousedown="undo(true)">'
+ +digits('unmark',[1,2,3,4,5,6,7,8,9])+'</div>';
+for (row=1; row<10; row++)
+  buttons.innerHTML +=
+    '<div class="button toggle" id="toggle-button-'+row+'" onmousedown="toggleCurrent('+row+')">'
+   +digits(row,[row])+'</div>';
+}());
+
+function displayGrid(grid) {
+  var gridElement = document.getElementById(grid.id);
+  gridElement.innerHTML = grid.showHTML().join("<br>");
+  var current   = grid.current;
+  var currentId = grid.id+"-b"+current.row+current.col;
+  document.getElementById(currentId).className += " current";
+}
+console.log( grid.set(0,7,1) );
+console.log( grid.set(1,0,4) );
+console.log( grid.set(2,1,2) );
+console.log( grid.set(3,4,5) );
+console.log( grid.set(3,6,4) );
+console.log( grid.set(3,8,7) );
+console.log( grid.set(4,2,8) );
+console.log( grid.set(4,6,3) );
+console.log( grid.set(5,2,1) );
+console.log( grid.set(5,4,9) );
+console.log( grid.set(6,0,3) );
+console.log( grid.set(6,3,4) );
+console.log( grid.set(6,6,2) );
+console.log( grid.set(7,1,5) );
+console.log( grid.set(7,3,1) );
+console.log( grid.set(8,3,8) );
+console.log( grid.set(8,5,6) );
+displayGrid(grid);
+</script>
+</body>
+
+</html>
