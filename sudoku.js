@@ -1,4 +1,5 @@
 
+// Claus Reinke, 2012
 function Set(arr) {
   this.arr = arr;
 }

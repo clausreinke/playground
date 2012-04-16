@@ -2,7 +2,8 @@
 <html>
 
 <head>
-<script src="sudoku.js"></script>
+<script src="sudoku.js">
+</script>
 <style type="text/css">
 #grid { font-size: small }
 .digit { position: absolute; padding-left: 0.25em; color: grey }
@@ -53,15 +54,42 @@
 <body>
 <div id="grid"></div>
 <div id="buttons"></div>
+<a href="javascript:location.hash='#071104212345364387428463521549603634662715731838856';initFromUrl()">Game</a> 
 <script>
 var grid = new Grid("grid");
+var urlState = "#";
 
-function setCurrent(n) {
-  console.log(grid.set(grid.current.row,grid.current.col,n));
+function initFromUrl() {
+  if (location.hash) {
+    var moves = location.hash.match(/\d\d\d/g);
+    console.log( moves );
+    for(var i=0; i<moves.length; i++) {
+      var move = moves[i].match(/(\d)(\d)(\d)/);
+      console.log(move);
+      grid.set(+move[1],+move[2],+move[3]);
+    }
+    urlState = location.hash;
+  }
   displayGrid(grid);
 }
 
-function undo(f) { grid.undo(f); displayGrid(grid); }
+window.onhashchange = initFromUrl;
+
+function setCurrent(n) {
+  console.log(grid.set(grid.current.row,grid.current.col,n));
+  urlState += ""+grid.current.row+grid.current.col+n;
+  location = urlState;
+  displayGrid(grid);
+}
+
+function undo(f) {
+  grid.undo(f);
+  urlState = "#";
+  for (var i=0; i<grid.log.length; i++)
+    urlState += ""+grid.log[i][0]+grid.log[i][1]+grid.log[i][2];
+  location = urlState;
+  displayGrid(grid);
+}
 
 function toggleCurrent(d) { grid.toggleCurrent(d); displayGrid(grid); }
 
@@ -134,24 +162,8 @@ function displayGrid(grid) {
   var currentId = grid.id+"-b"+current.row+current.col;
   document.getElementById(currentId).className += " current";
 }
-console.log( grid.set(0,7,1) );
-console.log( grid.set(1,0,4) );
-console.log( grid.set(2,1,2) );
-console.log( grid.set(3,4,5) );
-console.log( grid.set(3,6,4) );
-console.log( grid.set(3,8,7) );
-console.log( grid.set(4,2,8) );
-console.log( grid.set(4,6,3) );
-console.log( grid.set(5,2,1) );
-console.log( grid.set(5,4,9) );
-console.log( grid.set(6,0,3) );
-console.log( grid.set(6,3,4) );
-console.log( grid.set(6,6,2) );
-console.log( grid.set(7,1,5) );
-console.log( grid.set(7,3,1) );
-console.log( grid.set(8,3,8) );
-console.log( grid.set(8,5,6) );
-displayGrid(grid);
+
+initFromUrl();
 </script>
 </body>
 
