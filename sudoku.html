@@ -54,26 +54,66 @@
 <body>
 <div id="grid"></div>
 <div id="buttons"></div>
-<a href="javascript:location.hash='#071104212345364387428463521549603634662715731838856';initFromUrl()">Game</a> 
+<div id="games">
+<a href="javascript:location.hash='#071104212345364387428463521549603634662715731838856';initFromUrl()">Game 1</a>
+
+<a href="javascript:location.hash='#f980500000000000610000000000037080000000600200010000000400000905000031000200000000';initFromUrl()">Game 2</a>
+
+<a href="javascript:location.hash='#f080070400000030060000000000000100800703000000600000000200009030000801009000400000';initFromUrl()">Game 3</a>
+
+<a href="javascript:location.hash='#f007860000000000901020000000350000000000600040900000000002400080100009500000000000';initFromUrl()">Game 4</a>
+
+<a href="javascript:location.hash='#f006087000200000009000030100900400000000000850000000060000900001058000000070000000';initFromUrl()">Game 5</a>
+
+<a href="javascript:location.hash='#f005008401620700000000000000700000630300200000000010000000300090004000000010000000';initFromUrl()">Game 6</a>
+
+<a href="javascript:location.hash='#f004000900080000200000010000700000015005200000000000080300600400010005000000000070';initFromUrl()">Game 7</a>
+
+<a href="javascript:location.hash='#f003000090000104000000700000000030080400005000600000700000600104020080000000000600';initFromUrl()">Game 8</a>
+
+<a href="javascript:location.hash='#f002560000000000010000400000170008000000000509080000000300071000005000400000000200';initFromUrl()">Game 9</a>
+
+<a href="javascript:location.hash='#f001000034600009000000000070000020600037000000050008000400000200000730000000100000';initFromUrl()">Game 10</a>
+</div>
+
 <script>
 var grid = new Grid("grid");
 var urlState = "#";
 
 function initFromUrl() {
   if (location.hash) {
-    var moves = location.hash.match(/\d\d\d/g);
-    console.log( moves );
-    for(var i=0; i<moves.length; i++) {
-      var move = moves[i].match(/(\d)(\d)(\d)/);
-      console.log(move);
-      grid.set(+move[1],+move[2],+move[3]);
+    if (location.hash.match(/^#f/)) { // full list of positions: num or 0
+      var positions = location.hash.match(/\d/g);
+      console.log(positions);
+      grid = new Grid("grid");
+      urlState = "#";
+      for (var i=0; i<positions.length; i++) {
+        var num = +positions[i];
+        if (num!==0) {
+          var row = Math.floor(i/9),
+              col = i%9;
+          grid.set(row,col,num);
+          urlState += ""+row+col+num;
+        }
+      }
+      location.hash = urlState;
+    } else { // list of moves: row-col-num
+      var moves = location.hash.match(/\d\d\d/g);
+      console.log( moves );
+      grid = new Grid("grid");
+      for(var i=0; i<moves.length; i++) {
+        var move = moves[i].match(/(\d)(\d)(\d)/);
+        console.log(move);
+        grid.set(+move[1],+move[2],+move[3]);
+      }
+      urlState = location.hash;
     }
-    urlState = location.hash;
   }
   displayGrid(grid);
 }
 
-window.onhashchange = initFromUrl;
+// window.onhashchange = initFromUrl; // double init, if called explicitly..
+                                   // also, not supported on old browsers
 
 function setCurrent(n) {
   console.log(grid.set(grid.current.row,grid.current.col,n));
