@@ -19,10 +19,11 @@ Set.prototype = {
 };
 
 function Grid(id) {
-  this.id   = id;
-  this.grid = [];
+  this.id      = id;
+  this.grid    = [];
   this.current = {row:0, col:0};
-  this.log  = [];
+  this.log     = [];
+  this.rules   = { singletons: true, markers: true };
   this.initGrid();
 }
 
@@ -48,9 +49,11 @@ Grid.prototype = {
               for (var row=0; row<9; row++) {
                 line = "";
                 for (var col=0; col<9; col++) {
-                  if (this.grid[row][col].isSingleton())
+                  if (this.grid[row][col].isSingleton()
+                    && (this.rules.singletons || this.grid[row][col].set))
                     line += div("box","b"+row+col,
-                            div("singleton","s"+row+col,
+                            div("singleton"+(this.grid[row][col].set?" set":""),
+                                "s"+row+col,
                                 this.grid[row][col].getElement()));
                   else {
                     box = ""
@@ -90,17 +93,20 @@ Grid.prototype = {
             c.current.col = this.current.col;
             for (var row=0; row<9; row++) {
               c.grid[row] = [];
-              for (var col=0; col<9; col++)
+              for (var col=0; col<9; col++) {
                 c.grid[row][col] = new Set(this.grid[row][col].toArray());
+                c.grid[row][col].set = this.grid[row][col].set;
+              }
             }
             return c;
           },
-  set : function(r,c,n) { // TODO: - propagation incomplete => can lead to dead-end
-                            //     - with propagation, row/col/block checks can't fail?
+  set : function(r,c,n) {
+        // TODO: - propagation incomplete => can lead to dead-end
+        //       - add other propagation rules
           var e_s, singleton, singletons=[[r,c,n]]; // empties and singletons
           var row, col, num, next = this.clone();
 
-          while (singletons.length>0) {
+          do {
             singleton = singletons.shift();
             row = singleton[0]; col = singleton[1]; num = singleton[2];
 
@@ -126,10 +132,14 @@ Grid.prototype = {
             if (singletons.length>0)
               singletons.forEach(function(s){
                 console.log("singleton at "+s[0]+s[1]+":"+s[2]) });
-          }
+          } while ((singletons.length>0) && this.rules.singletons);
 
-          this.grid = next.grid;
-          this.log.push([row,col,num]);
+          if (this.rules.markers)
+            this.grid = next.grid;
+          else
+            this.grid[r][c] = new Set([n]);
+          this.grid[r][c].set = true;
+          this.log.push([r,c,n]);
           return "set "+num+" at "+row+col;
         },
   undo : function(current) {
@@ -147,6 +157,14 @@ Grid.prototype = {
               this.set(log[move][0],log[move][1],log[move][2]);
             };
          },
+  replay : function() { // replay log, possibly with changed rules
+             var log  = this.log;
+             this.log = [];
+             this.initGrid();
+             for (var move=0; move<log.length; move++) {
+               this.set(log[move][0],log[move][1],log[move][2]);
+             }
+           },
   toggleCurrent : function(n) {
                     var curset = this.grid[this.current.row][this.current.col];
                     if (curset.has(n))
