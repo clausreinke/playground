@@ -166,16 +166,18 @@ function toggleCurrent(d) { grid.toggleCurrent(d); displayGrid(grid); }
 
 function move(event) {
   switch (event.keyCode) {
+    // backspace
+    case  8: undo(); return;
     // digits
-    case 49: setCurrent(1); return;
-    case 50: setCurrent(2); return;
-    case 51: setCurrent(3); return;
-    case 52: setCurrent(4); return;
-    case 53: setCurrent(5); return;
-    case 54: setCurrent(6); return;
-    case 55: setCurrent(7); return;
-    case 56: setCurrent(8); return;
-    case 57: setCurrent(9); return;
+    case 49: if (event.ctrlKey) toggleCurrent(1); else setCurrent(1); return;
+    case 50: if (event.ctrlKey) toggleCurrent(2); else setCurrent(2); return;
+    case 51: if (event.ctrlKey) toggleCurrent(3); else setCurrent(3); return;
+    case 52: if (event.ctrlKey) toggleCurrent(4); else setCurrent(4); return;
+    case 53: if (event.ctrlKey) toggleCurrent(5); else setCurrent(5); return;
+    case 54: if (event.ctrlKey) toggleCurrent(6); else setCurrent(6); return;
+    case 55: if (event.ctrlKey) toggleCurrent(7); else setCurrent(7); return;
+    case 56: if (event.ctrlKey) toggleCurrent(8); else setCurrent(8); return;
+    case 57: if (event.ctrlKey) toggleCurrent(9); else setCurrent(9); return;
     // arrows
     case 37: grid.moveBy(0,-1); break;
     case 39: grid.moveBy(0,1); break;
