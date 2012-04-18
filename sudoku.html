@@ -63,10 +63,18 @@
 .button.set div { text-align: center; font-size: larger }
 
 #games a { display: block }
+
+.no-js .js-only { display: none }
 </style>
 </head>
 
-<body>
+<body class="no-js">
+
+<noscript>
+Please activate Javascript. This Sudoku App will not work without it.
+</noscript>
+
+<div class="js-only">
 <div id="grid"></div>
 <div id="log"></div>
 <div id="buttons"></div>
@@ -93,9 +101,12 @@
 
 <a href="javascript:location.hash='#f001000034600009000000000070000020600037000000050008000400000200000730000000100000';initFromUrl()">Game 10</a>
 </div>
+</div>
 
 <script>
 // TODO: replace string-DOM with createElements
+
+document.body.className = ""; // JS enabled, hooray
 
 var grid = new Grid("grid");
 var urlState = "#";
