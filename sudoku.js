@@ -165,11 +165,11 @@ Grid.prototype = {
                this.set(log[move][0],log[move][1],log[move][2]);
              }
            },
-  toggleCurrent : function(n) {
+  toggleCurrent : function(n) { // TODO: check implied singletons are valid!
                     var curset = this.grid[this.current.row][this.current.col];
-                    if (curset.has(n))
-                      curset.remove(n);
-                    else
+                    if (curset.has(n)) {
+                      if (!curset.isSingleton()) curset.remove(n);
+                    } else
                       curset.insert(n);
                   },
   row_without : function(r,c,n) {
