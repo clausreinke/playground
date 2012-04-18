@@ -1,4 +1,7 @@
 
+if (typeof console==="undefined") console = {};
+if (typeof console.log==="undefined") console.log = function() {};
+
 // Claus Reinke, 2012
 function Set(arr) {
   this.arr = arr;
