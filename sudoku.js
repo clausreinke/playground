@@ -107,6 +107,7 @@ Grid.prototype = {
         // TODO: - propagation incomplete => can lead to dead-end
         //       - add other propagation rules
           var e_s, singleton, singletons=[[r,c,n]]; // empties and singletons
+          var chain = []; // singletons set temporarily
           var row, col, num, next = this.clone();
 
           do {
@@ -114,23 +115,25 @@ Grid.prototype = {
             row = singleton[0]; col = singleton[1]; num = singleton[2];
 
             if (!next.grid[row][col].has(num))
-              return num+" not possible at position "+row+col;
+              return [num+" not possible at position "+row+col,chain];
             next.grid[row][col] = new Set([num]);
 
             e_s = next.row_without(row,col,num);
             if (e_s[0].length>0) 
-              return num+" not possible at row "+row+col;
+              return [num+" not possible at row "+row+col,chain];
             singletons = singletons.concat(e_s[1]);
 
             e_s = next.col_without(row,col,num);
             if (e_s[0].length>0) 
-              return num+" not possible at column "+row+col;
+              return [num+" not possible at column "+row+col,chain];
             singletons = singletons.concat(e_s[1]);
 
             e_s = next.block_without(row,col,num);
             if (e_s[0].length>0) 
-              return num+" not possible at block "+row+col;
+              return [num+" not possible at block "+row+col,chain];
             singletons = singletons.concat(e_s[1]);
+
+            chain.push(singleton);
 
             if (singletons.length>0)
               singletons.forEach(function(s){
@@ -143,7 +146,7 @@ Grid.prototype = {
             this.grid[r][c] = new Set([n]);
           this.grid[r][c].set = true;
           this.log.push([r,c,n]);
-          return "set "+num+" at "+row+col;
+          return ["set "+n+" at "+r+c,chain];
         },
   undo : function(current) {
             this.initGrid();
@@ -231,6 +234,15 @@ Grid.prototype = {
                  b.push(this.grid[3*r_+ri][3*c_+ci]); 
              return b;
            },
+  blockCoords : function(r,c) {
+                 var r_ = Math.floor(r/3),
+                     c_ = Math.floor(c/3),
+                     b  = [];
+                 for(var ri=0; ri<3; ri++)
+                   for(var ci=0; ci<3; ci++)
+                     b.push([3*r_+ri,3*c_+ci]);
+                 return b;
+               },
   moveTo : function(r,c) {
              this.current.row = r;
              this.current.col = c;

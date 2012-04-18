@@ -8,6 +8,7 @@
 #grid    { font-size: small; float: left }
 #log     { font-size: small; float: right }
 #buttons { font-size: small; font-weight: bold; float: left; clear: left }
+#message { float: left; clear: left }
 #rules   { font-weight: bold }
 
 .rule.true { color: green; }
@@ -66,6 +67,9 @@
 
 .no-js .js-only { display: none }
 </style>
+
+<style type="text/css" id="tmp-styles">
+</style>
 </head>
 
 <body class="no-js">
@@ -78,6 +82,7 @@ Please activate Javascript. This Sudoku App will not work without it.
 <div id="grid"></div>
 <div id="log"></div>
 <div id="buttons"></div>
+<div id="message"></div>
 <div id="rules"></div>
 
 <div id="games">
@@ -147,9 +152,49 @@ function initFromUrl() {
                                    // also, not supported on old browsers
 
 function setCurrent(n) {
-  console.log(grid.set(grid.current.row,grid.current.col,n));
-  urlState += ""+grid.current.row+grid.current.col+n;
-  location = urlState;
+  var result = grid.set(grid.current.row,grid.current.col,n);
+  var msg    = result[0], chain = result[1];
+  var match;
+  var tmpstyles = document.getElementById("tmp-styles");
+
+  console.log(msg,chain);
+  document.getElementById("message").innerHTML = msg+" : "
+    +chain.map(function(m){return ""+m[0]+m[1]+":"+m[2]}).join("|");
+
+  if (msg.match(/set/)) {
+    urlState += ""+grid.current.row+grid.current.col+n;
+    location = urlState;
+  } else if (match = msg.match(/not possible at position (\d\d)/)) {
+    chain.push([match[1],match[2]]);
+    tmpstyles.innerHTML =
+      '.box[id*="-b'+match[1]+'"] { background-color: red }'
+     +chain.map(function(m){
+        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
+      }).join("");
+  } else if (match = msg.match(/not possible at row (\d)(\d)/)) {
+    chain.push([match[1],match[2]]);
+    tmpstyles.innerHTML =
+      '.box[id*="-b'+match[1]+'"] { background-color: red }'
+     +chain.map(function(m){
+        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
+      }).join("");
+  } else if (match = msg.match(/not possible at column (\d)(\d)/)) {
+    chain.push([match[1],match[2]]);
+    tmpstyles.innerHTML =
+      '.box[id$="'+match[2]+'"] { background-color: red }'
+     +chain.map(function(m){
+        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
+      }).join("");
+  } else if (match = msg.match(/not possible at block (\d)(\d)/)) {
+    chain.push([match[1],match[2]]);
+    tmpstyles.innerHTML =
+      grid.blockCoords(match[1],match[2]).map(function(m){
+        return '.box[id*="'+m[0]+m[1]+'"] { background-color: red }'
+      }).join("")
+     +chain.map(function(m){
+        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
+      }).join("");
+  }
   displayGrid(grid);
 }
 
@@ -165,6 +210,7 @@ function undo(f) {
 function toggleCurrent(d) { grid.toggleCurrent(d); displayGrid(grid); }
 
 function move(event) {
+  document.getElementById("tmp-styles").innerHTML = "";
   switch (event.keyCode) {
     // backspace
     case  8: undo(); return;
