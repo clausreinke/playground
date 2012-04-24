@@ -86,25 +86,6 @@ Grid.prototype = {
               }
               return lines;
              },
-  show : function() {
-          var line;
-          for (var row=0; row<9; row++) {
-            if (row%3==0)
-              console.log("  =====================================");
-            else
-              console.log("  -----------  -----------  -----------");
-            for (var i=0; i<3; i++) {
-              line = "||";
-              for (var col=0; col<9; col++) {
-                for (var j=0; j<3; j++)
-                  line += this.grid[row][col].has(i*3+j+1) ? i*3+j+1 : " ";
-                line += col%3==2 ? "||" : "|";
-              }
-              console.log(line);
-            }
-          }
-          console.log("  =====================================");
-         },
   clone : function() {
             var c = new Grid(this.id);  // TODO: move id to showHTML?
             c.current.row = this.current.row;
@@ -193,19 +174,6 @@ Grid.prototype = {
                     } else
                       curset.insert(n);
                   },
-  row    : function(r) { return this.grid[r] }, 
-  column : function(c) { return [0,1,2,3,4,5,6,7,8].map(function(r){
-                                                          return this.grid[r][c]
-                                                        }.bind(this)) },
-  block  : function(r,c) {
-             var r_ = Math.floor(r/3),
-                 c_ = Math.floor(c/3),
-                 b  = [];
-             for(var ri=0; ri<3; ri++)
-               for(var ci=0; ci<3; ci++)
-                 b.push(this.grid[3*r_+ri][3*c_+ci]); 
-             return b;
-           },
   group_without : function(r,c,n,coords) { // group (by coords) containing box rc
                                            // remove mark n from other boxes in group
                     var empties = [], singletons = [], box, wasSingleton = false;
@@ -248,11 +216,3 @@ Grid.prototype = {
              return this.current;
            }
 }
-
-/*
-grid = new Grid();
-console.log(grid.set(0,0,1));
-console.log(grid.set(0,0,2));
-grid.show();
-grid.showHTML();
-*/
