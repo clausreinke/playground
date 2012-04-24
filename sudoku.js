@@ -211,8 +211,8 @@ Grid.prototype = {
              return this.current;
            },
   moveBy : function(r,c) {
-             this.current.row = (this.current.row+r)%9;
-             this.current.col = (this.current.col+c)%9;
+             this.current.row = (this.current.row+r+9)%9;
+             this.current.col = (this.current.col+c+9)%9;
              return this.current;
            }
 }
