@@ -53,7 +53,7 @@ Grid.prototype = {
                     this.grid[row][col] = new Set([1,2,3,4,5,6,7,8,9]);
                 }
              },
-  showHTML : function() { // TODO: incremental updates, via ids
+  showHTML : function() {
               var self = this;
               function div(cls,id,text) {
                 return "<div class='"+cls+"' id='"+self.id+"-"+id+"'>"

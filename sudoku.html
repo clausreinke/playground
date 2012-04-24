@@ -59,6 +59,9 @@
 
 .line       { clear: both }
 .current    { background-color: lightblue }
+.invalid    { background-color: red }
+.chain      { background-color: orange }
+.impossible { background-color: yellow }
 
 .button          { float: left; height: 3em; width: 2.7em;
                    border-left: thin solid; border-bottom: thin solid; }
@@ -76,8 +79,6 @@
 .js .noscript    { display: none }
 </style>
 
-<style type="text/css" id="tmp-styles">
-</style>
 </head>
 
 <body class="no-js">
@@ -163,47 +164,62 @@ function setCurrent(n) {
   var result = grid.set(grid.current.row,grid.current.col,n);
   var msg    = result[0], chain = result[1];
   var match;
-  var tmpstyles = document.getElementById("tmp-styles");
 
   console.log(msg,chain);
   document.getElementById("message").innerHTML = msg+" : "
     +chain.map(function(m){return ""+m[0]+m[1]+":"+m[2]}).join("|");
 
+  displayGrid(grid);
+
   if (msg.match(/set/)) {
+
     urlState += ""+grid.current.row+grid.current.col+n;
     location = urlState;
-  } else if (match = msg.match(/not possible at position (\d\d)/)) {
+
+    displayGrid(grid);
+
+  } else if (match = msg.match(/not possible at position (\d)(\d)/)) {
+
     chain.push([match[1],match[2]]);
-    tmpstyles.innerHTML =
-      '.box[id*="-b'+match[1]+'"] { background-color: red }'
-     +chain.map(function(m){
-        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
-      }).join("");
+    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
+    chain.forEach(function(m){
+      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
+    });
+
   } else if (match = msg.match(/not possible at row (\d)(\d)/)) {
+
     chain.push([match[1],match[2]]);
-    tmpstyles.innerHTML =
-      '.box[id*="-b'+match[1]+'"] { background-color: red }'
-     +chain.map(function(m){
-        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
-      }).join("");
+    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
+    chain.forEach(function(m){
+      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
+    });
+    [0,1,2,3,4,5,6,7,8].forEach(function(c){
+      document.getElementById(grid.id+"-b"+match[1]+c).className += " invalid";
+    });
+
   } else if (match = msg.match(/not possible at column (\d)(\d)/)) {
+
     chain.push([match[1],match[2]]);
-    tmpstyles.innerHTML =
-      '.box[id$="'+match[2]+'"] { background-color: red }'
-     +chain.map(function(m){
-        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
-      }).join("");
+    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
+    chain.forEach(function(m){
+      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
+    });
+    [0,1,2,3,4,5,6,7,8].forEach(function(r){
+      document.getElementById(grid.id+"-b"+r+match[2]).className += " invalid";
+    });
+
   } else if (match = msg.match(/not possible at block (\d)(\d)/)) {
+
     chain.push([match[1],match[2]]);
-    tmpstyles.innerHTML =
-      grid.blockCoords(match[1],match[2]).map(function(m){
-        return '.box[id*="'+m[0]+m[1]+'"] { background-color: red }'
-      }).join("")
-     +chain.map(function(m){
-        return '.box[id*="-b'+m[0]+m[1]+'"] { background-color: orange }'
-      }).join("");
+    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
+    chain.forEach(function(m){
+      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
+    });
+    grid.blockCoords(+match[1],+match[2]).forEach(function(c){
+      document.getElementById(grid.id+"-b"+c[0]+c[1]).className += " invalid";
+    });
+
   }
-  displayGrid(grid);
 }
 
 function undo(f) {
@@ -212,13 +228,13 @@ function undo(f) {
   for (var i=0; i<grid.log.length; i++)
     urlState += ""+grid.log[i][0]+grid.log[i][1]+grid.log[i][2];
   location = urlState;
+
   displayGrid(grid);
 }
 
 function toggleCurrent(d) { grid.toggleCurrent(d); displayGrid(grid); }
 
 function move(event) {
-  document.getElementById("tmp-styles").innerHTML = "";
   switch (event.keyCode) {
     // backspace
     case  8: undo(); return;
@@ -243,6 +259,7 @@ function move(event) {
 function focus(event) {
   var coord;
   console.log("focus",event);
+
   if (event.target.className.indexOf("box")!==-1) {
     coord = /grid-b(\d)(\d)/.exec(event.target.id);
   } else if (event.target.parentNode.className.indexOf("box")!==-1) {
@@ -290,6 +307,8 @@ function toggleRule(rule) {
 
 function displayGrid(grid) {
   var gridElement = document.getElementById(grid.id);
+  // since the grid is re-generated from scratch,
+  // temporary class hints (chain, invalid) disappear as well
   gridElement.innerHTML = grid.showHTML().join("<br>");
   var current   = grid.current;
   var currentId = grid.id+"-b"+current.row+current.col;
