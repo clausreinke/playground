@@ -37,7 +37,11 @@ function Grid(id) {
   this.grid    = [];
   this.current = {row:0, col:0};
   this.log     = [];
-  this.rules   = { singletons: true, markers: true };
+  this.rules   = { singletons: {active:true
+                               ,description:"set position if only one marker remains"}
+                 , markers:    {active:true
+                               ,description:"update markers in row/column/block on every move"}
+                 };
   this.initGrid();
 }
 
@@ -64,7 +68,7 @@ Grid.prototype = {
                 line = "";
                 for (var col=0; col<9; col++) {
                   if (this.grid[row][col].isSingleton()
-                    && (this.rules.singletons || this.grid[row][col].set))
+                    && (this.rules.singletons.active || this.grid[row][col].set))
                     line += div("box","b"+row+col,
                             div("singleton"+(this.grid[row][col].set?" set":""),
                                 "s"+row+col,
@@ -149,9 +153,9 @@ Grid.prototype = {
             if (singletons.length>0)
               singletons.forEach(function(s){
                 console.log("singleton at "+s[0]+s[1]+":"+s[2]) });
-          } while ((singletons.length>0) && this.rules.singletons);
+          } while ((singletons.length>0) && this.rules.singletons.active);
 
-          if (this.rules.markers)
+          if (this.rules.markers.active)
             this.grid = next.grid;
           else
             this.grid[r][c] = new Set([n]);

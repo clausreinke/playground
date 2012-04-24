@@ -276,7 +276,7 @@ for (row=1; row<10; row++)
 }());
 
 function toggleRule(rule) {
-  grid.rules[rule] = !grid.rules[rule];
+  grid.rules[rule].active = !grid.rules[rule].active;
   grid.replay();
   displayGrid(grid);
 }
@@ -290,7 +290,8 @@ function displayGrid(grid) {
   var rules = "";
   for (var rule in grid.rules)
     if (grid.rules.hasOwnProperty(rule)) rules +=
-      '<div class="rule '+grid.rules[rule]+'"'
+      '<div class="rule '+grid.rules[rule].active+'" '
+      +'title="'+grid.rules[rule].description+'" '
       +'onmousedown="toggleRule(\''+rule+'\')">'
       +rule
       +'</div>';
