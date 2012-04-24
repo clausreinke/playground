@@ -133,17 +133,17 @@ Grid.prototype = {
               return [num+" not possible at position "+row+col,chain];
             next.grid[row][col] = new Set([num]);
 
-            e_s = next.row_without(row,col,num);
+            e_s = next.group_without(row,col,num,this.rowCoords);
             if (e_s[0].length>0) 
               return [num+" not possible at row "+row+col,chain];
             singletons = singletons.concat(e_s[1]);
 
-            e_s = next.col_without(row,col,num);
+            e_s = next.group_without(row,col,num,this.columnCoords);
             if (e_s[0].length>0) 
               return [num+" not possible at column "+row+col,chain];
             singletons = singletons.concat(e_s[1]);
 
-            e_s = next.block_without(row,col,num);
+            e_s = next.group_without(row,col,num,this.blockCoords);
             if (e_s[0].length>0) 
               return [num+" not possible at block "+row+col,chain];
             singletons = singletons.concat(e_s[1]);
@@ -193,49 +193,6 @@ Grid.prototype = {
                     } else
                       curset.insert(n);
                   },
-  row_without : function(r,c,n) {
-                  var empties = [], singletons = [], block, wasSingleton = false;
-                  for (var ci=0; ci<9; ci++) {
-                    if (ci===c) continue;
-                    block = this.grid[r][ci];
-                    wasSingleton = block.isSingleton();
-                    block.remove(n);
-                    if (block.isEmpty()) empties.push([r,ci]);
-                    if (block.isSingleton()&&!wasSingleton)
-                      singletons.push([r,ci,block.getElement()]);
-                  }
-                  return [empties,singletons];
-                },
-  col_without : function(r,c,n) {
-                  var empties = [], singletons = [], block, wasSingleton = false;
-                  for (var ri=0; ri<9; ri++) {
-                    if (ri===r) continue;
-                    block = this.grid[ri][c];
-                    wasSingleton = block.isSingleton();
-                    block.remove(n);
-                    if (block.isEmpty()) empties.push([ri,c]);
-                    if (block.isSingleton()&&!wasSingleton)
-                      singletons.push([ri,c,block.getElement()]);
-                  }
-                  return [empties,singletons];
-                },
-  block_without  : function(r,c,n) {
-                     var r_ = Math.floor(r/3),
-                         c_ = Math.floor(c/3);
-                     var empties = [], singletons = [], block, rb, cb, wasSingleton = false;
-                     for(var ri=0; ri<3; ri++)
-                       for(var ci=0; ci<3; ci++) {
-                         rb = 3*r_+ri; cb = 3*c_+ci;
-                         if ((rb===r)&&(cb===c)) continue;
-                         block = this.grid[rb][cb]; 
-                         wasSingleton = block.isSingleton();
-                         block.remove(n);
-                         if (block.isEmpty()) empties.push([rb,cb]);
-                         if (block.isSingleton()&&!wasSingleton)
-                          singletons.push([rb,cb,block.getElement()]);
-                       }
-                     return [empties,singletons];
-                   },
   row    : function(r) { return this.grid[r] }, 
   column : function(c) { return [0,1,2,3,4,5,6,7,8].map(function(r){
                                                           return this.grid[r][c]
@@ -249,15 +206,37 @@ Grid.prototype = {
                  b.push(this.grid[3*r_+ri][3*c_+ci]); 
              return b;
            },
-  blockCoords : function(r,c) {
-                 var r_ = Math.floor(r/3),
-                     c_ = Math.floor(c/3),
-                     b  = [];
-                 for(var ri=0; ri<3; ri++)
-                   for(var ci=0; ci<3; ci++)
-                     b.push([3*r_+ri,3*c_+ci]);
-                 return b;
-               },
+  group_without : function(r,c,n,coords) { // group (by coords) containing box rc
+                                           // remove mark n from other boxes in group
+                    var empties = [], singletons = [], box, wasSingleton = false;
+                    coords(r,c).forEach(function(rc) {
+                      var ri = rc[0], ci = rc[1];
+                      if ((ci!==c)||(ri!==r)) {
+                        box = this.grid[ri][ci];
+                        wasSingleton = box.isSingleton();
+                        box.remove(n);
+                        if (box.isEmpty()) empties.push([ri,ci]);
+                        if (box.isSingleton()&&!wasSingleton)
+                          singletons.push([ri,ci,box.getElement()]);
+                      }
+                    }.bind(this));
+                    return [empties,singletons];
+                  },
+  rowCoords :    function(r,c) {
+                   return [0,1,2,3,4,5,6,7,8].map(function(ci){ return [r,ci] })
+                 },
+  columnCoords : function(r,c) {
+                   return [0,1,2,3,4,5,6,7,8].map(function(ri){ return [ri,c] })
+                 },
+  blockCoords :  function(r,c) {
+                  var r_ = Math.floor(r/3),
+                      c_ = Math.floor(c/3),
+                      b  = [];
+                  for(var ri=0; ri<3; ri++)
+                    for(var ci=0; ci<3; ci++)
+                      b.push([3*r_+ri,3*c_+ci]);
+                  return b;
+                 },
   moveTo : function(r,c) {
              this.current.row = r;
              this.current.col = c;
