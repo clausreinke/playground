@@ -2,6 +2,17 @@
 if (typeof console==="undefined") console = {};
 if (typeof console.log==="undefined") console.log = function() {};
 
+if (typeof Function.prototype.bind!=="function")
+  Function.prototype.bind = function(it) {
+    var f = this;
+    return function() { return f.apply(it,arguments) }
+  };
+
+if (typeof Array.prototype.forEach!=="function")
+  Array.prototype.forEach = function(cb){
+    for (var i=0; i<this.length; i++) cb(this[i])
+  };
+
 // Claus Reinke, 2012
 function Set(arr) {
   this.arr = arr;
