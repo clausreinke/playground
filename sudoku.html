@@ -12,11 +12,11 @@
 #message { float: left; clear: left }
 #rules   { font-weight: bold }
 
-.rule.true { color: green; }
-.rule.true:after { content: " on"; }
+.rule.true        { color: green; }
+.rule.true:after  { content: " on"; }
 .rule.false:after { content: " off"; }
 
-.digit { position: absolute; padding-left: 0.25em; color: grey }
+.digit          { position: absolute; padding-left: 0.25em; color: grey }
 .digit[id$="1"] { left:0em; top:0em }
 .digit[id$="2"] { left:1em; top:0em }
 .digit[id$="3"] { left:2em; top:0em }
@@ -28,10 +28,14 @@
 .digit[id$="9"] { left:2em; top:2em }
 
 .box   { position: relative; float: left; height: 3em; width: 3em; }
-.box[id*="-b0"] { border-top-style: solid; border-top-width: 2px }
-.box[id*="-b8"] { border-bottom-style: solid; border-bottom-width: 2px }
-.box[id$="0"] { border-left-style: solid; border-left-width: 2px }
-.box[id$="8"] { border-right-style: solid; border-right-width: 2px }
+.box[id*="-b0"]
+  { border-top-style: solid; border-top-width: 2px }
+.box[id*="-b8"]
+  { border-bottom-style: solid; border-bottom-width: 2px }
+.box[id$="0"]
+  { border-left-style: solid; border-left-width: 2px }
+.box[id$="8"]
+  { border-right-style: solid; border-right-width: 2px }
 .box[id$="0"],.box[id$="1"],
 .box[id$="3"],.box[id$="4"],
 .box[id$="6"],.box[id$="7"]
@@ -44,27 +48,29 @@
   { border-right-style: solid; border-right-width: 2px }
 .box[id*="-b2"],.box[id*="-b5"]
   { border-bottom-style: solid; border-bottom-width: 2px }
-.box .singleton  { text-align: center; font-weight: bold;
-                   font-size: large; border: thin solid;
-                   margin: 1px; height: 90%;
-                   background-color: lightgrey }
-.box .singleton.set  { margin: 1px; height: 90%;
-                       border: thin solid; background-color: lightgreen }
+.box .singleton
+  { text-align: center; font-weight: bold;
+    font-size: large; border: thin solid;
+    margin: 1px; height: 90%;
+    background-color: lightgrey }
+.box .singleton.set
+  { margin: 1px; height: 90%;
+    border: thin solid; background-color: lightgreen }
 
-.line { clear: both }
-.current { background-color: lightblue }
+.line       { clear: both }
+.current    { background-color: lightblue }
 
-.button  { float: left; height: 3em; width: 2.7em;
-           border-left: thin solid; border-bottom: thin solid; }
-.button.undo { background-color: red }
+.button          { float: left; height: 3em; width: 2.7em;
+                   border-left: thin solid; border-bottom: thin solid; }
+.button.undo     { background-color: red }
 .button.undo div { font-size: larger; text-align: center }
-.button.set { background-color: lightgreen }
-.button.unmark { background-color: lightblue; position: relative; clear: both }
-.button.toggle { background-color: lightblue; position: relative }
-.button[id$="9"]  { border-right: thin solid }
-.button.set div { text-align: center; font-size: larger }
+.button.set      { background-color: lightgreen }
+.button.unmark   { background-color: lightblue; position: relative; clear: both }
+.button.toggle   { background-color: lightblue; position: relative }
+.button[id$="9"] { border-right: thin solid }
+.button.set div  { text-align: center; font-size: larger }
 
-#games a { display: block }
+#games a         { display: block }
 
 .no-js .js-only  { display: none }
 .js .noscript    { display: none }
