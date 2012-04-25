@@ -37,10 +37,12 @@ function Grid(id) {
   this.grid    = [];
   this.current = {row:0, col:0};
   this.log     = [];
-  this.rules   = { singletons: {active:true
-                               ,description:"set position if only one marker remains"}
-                 , markers:    {active:true
+  this.rules   = { markers:    {active:true
                                ,description:"update markers in row/column/block on every move"}
+                 , singletons: {active:false
+                               ,description:"set if only one marker remains on a position"}
+                 , uniques:    {active:false
+                               ,description:"set if only one position remains for a marker in a group"}
                  };
   this.initGrid();
 }
@@ -68,9 +70,11 @@ Grid.prototype = {
                 line = "";
                 for (var col=0; col<9; col++) {
                   if (this.grid[row][col].isSingleton()
-                    && (this.rules.singletons.active || this.grid[row][col].set))
+                    && (this.rules.singletons.active
+                     || this.rules.uniques.active
+                     || this.grid[row][col].set==="set"))
                     line += div("box","b"+row+col,
-                            div("singleton"+(this.grid[row][col].set?" set":""),
+                            div(this.grid[row][col].set,
                                 "s"+row+col,
                                 this.grid[row][col].getElement()));
                   else {
@@ -102,45 +106,51 @@ Grid.prototype = {
   set : function(r,c,n) {
         // TODO: - propagation incomplete => can lead to dead-end
         //       - add other propagation rules
-          var e_s, singleton, singletons=[[r,c,n]]; // empties and singletons
-          var chain = []; // singletons set temporarily
-          var row, col, num, next = this.clone();
+          var e_s, candidate, candidates=[[r,c,n,"set"]]; // empties and candidates
+          var chain = []; // candidates set temporarily
+          var row, col, num, mode, next = this.clone();
 
           do {
-            singleton = singletons.shift();
-            row = singleton[0]; col = singleton[1]; num = singleton[2];
+            candidate = candidates.shift();
+            row = candidate[0]; col  = candidate[1];
+            num = candidate[2]; mode = candidate[3];
 
             if (!next.grid[row][col].has(num))
               return [num+" not possible at position "+row+col,chain];
             next.grid[row][col] = new Set([num]);
+            console.log("set "+row+col+":"+num+"("+mode+")");
+            next.grid[row][col].set = mode;
 
             e_s = next.group_without(row,col,num,this.rowCoords);
             if (e_s[0].length>0) 
               return [num+" not possible at row "+row+col,chain];
-            singletons = singletons.concat(e_s[1]);
+            if (this.rules.singletons.active)
+              candidates = candidates.concat(e_s[1]);
 
             e_s = next.group_without(row,col,num,this.columnCoords);
             if (e_s[0].length>0) 
               return [num+" not possible at column "+row+col,chain];
-            singletons = singletons.concat(e_s[1]);
+            if (this.rules.singletons.active)
+              candidates = candidates.concat(e_s[1]);
 
             e_s = next.group_without(row,col,num,this.blockCoords);
             if (e_s[0].length>0) 
               return [num+" not possible at block "+row+col,chain];
-            singletons = singletons.concat(e_s[1]);
+            if (this.rules.singletons.active)
+              candidates = candidates.concat(e_s[1]);
 
-            chain.push(singleton);
+            chain.push(candidate);
 
-            if (singletons.length>0)
-              singletons.forEach(function(s){
-                console.log("singleton at "+s[0]+s[1]+":"+s[2]) });
-          } while ((singletons.length>0) && this.rules.singletons.active);
+            if ((candidates.length===0) && this.rules.uniques.active)
+              candidates = next.uniques();
+
+          } while (candidates.length>0);
 
           if (this.rules.markers.active)
             this.grid = next.grid;
           else
             this.grid[r][c] = new Set([n]);
-          this.grid[r][c].set = true;
+          // this.grid[r][c].set = "set";
           this.log.push([r,c,n]);
           return ["set "+n+" at "+r+c,chain];
         },
@@ -180,16 +190,62 @@ Grid.prototype = {
                     coords(r,c).forEach(function(rc) {
                       var ri = rc[0], ci = rc[1];
                       if ((ci!==c)||(ri!==r)) {
+
                         box = this.grid[ri][ci];
                         wasSingleton = box.isSingleton();
                         box.remove(n);
                         if (box.isEmpty()) empties.push([ri,ci]);
                         if (box.isSingleton()&&!wasSingleton)
-                          singletons.push([ri,ci,box.getElement()]);
+                          singletons.push([ri,ci,box.getElement(),"singleton"]);
+
                       }
                     }.bind(this));
                     return [empties,singletons];
                   },
+  uniques : function() {
+              var r,c,b,d, row = [], col = [], block = [], candidates = [];
+              var unique_row    = "unique row",
+                  unique_column = "unique column",
+                  unique_block  = "unique block";
+
+              for (r=0; r<9; r++)
+                row[r] = [1,2,3,4,5,6,7,8,9].map(function(d){return []});
+              for (c=0; c<9; c++)
+                col[c] = [1,2,3,4,5,6,7,8,9].map(function(d){return []});
+              for (b=0; b<9; b++)
+                block[b] = [1,2,3,4,5,6,7,8,9].map(function(d){return []});
+
+              for (r=0; r<9; r++)
+                for (c=0; c<9; c++)
+                  for (d=1; d<10; d++)
+                    if (this.grid[r][c].has(d)) {
+                      row[r][d-1].push(c);
+                      col[c][d-1].push(r);
+                      block[Math.floor(r/3)*3+Math.floor(c/3)][d-1].push();
+                    }
+
+              for (r=0; r<9; r++)
+                for (d=1; d<10; d++)
+                  if (row[r][d-1].length===1)
+                    candidates.push([r,row[r][d-1][0],d,unique_row]);
+              for (c=0; c<9; c++)
+                for (d=1; d<10; d++)
+                  if (col[c][d-1].length===1)
+                    candidates.push([col[c][d-1][0],c,d,unique_column]);
+              for (b=0; b<9; b++)
+                for (d=1; d<10; d++)
+                  if (block[b][d-1].length===1)
+                    candidates.push([block[b][d-1][0]
+                                    ,block[b][d-1][1]
+                                    ,d
+                                    ,unique_block]);
+
+              candidates = candidates.filter(function(s){
+                                               return !(this.grid[s[0]][s[1]].isSingleton())
+                                             }.bind(this));
+
+              return candidates;
+            },
   rowCoords :    function(r,c) {
                    return [0,1,2,3,4,5,6,7,8].map(function(ci){ return [r,ci] })
                  },

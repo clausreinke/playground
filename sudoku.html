@@ -48,14 +48,16 @@
   { border-right-style: solid; border-right-width: 2px }
 .box[id*="-b2"],.box[id*="-b5"]
   { border-bottom-style: solid; border-bottom-width: 2px }
-.box .singleton
+.box .singleton, .box .set, .box .unique
   { text-align: center; font-weight: bold;
     font-size: large; border: thin solid;
-    margin: 1px; height: 90%;
-    background-color: lightgrey }
-.box .singleton.set
-  { margin: 1px; height: 90%;
-    border: thin solid; background-color: lightgreen }
+    margin: 1px; height: 90% }
+.box .singleton
+  { background-color: lightgrey }
+.box .unique
+  { background-color: #EDEDB4 }
+.box .set
+  { background-color: lightgreen }
 
 .line       { clear: both }
 .current    { background-color: lightblue }
