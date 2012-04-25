@@ -128,6 +128,7 @@ var urlState = "#";
 function initFromUrl() {
   if (location.hash) {
     if (location.hash.match(/^#f/)) { // full list of positions: num or 0
+
       var positions = location.hash.match(/\d/g);
       console.log(positions);
       grid = new Grid("grid");
@@ -142,7 +143,9 @@ function initFromUrl() {
         }
       }
       location.hash = urlState;
+
     } else { // list of moves: row-col-num
+
       var moves = location.hash.match(/\d\d\d/g);
       console.log( moves );
       grid = new Grid("grid");
@@ -152,6 +155,7 @@ function initFromUrl() {
         grid.set(+move[1],+move[2],+move[3]);
       }
       urlState = location.hash;
+
     }
   }
   displayGrid(grid);
@@ -171,55 +175,46 @@ function setCurrent(n) {
 
   displayGrid(grid);
 
+  // setting went okay, record & display
   if (msg.match(/set/)) {
 
     urlState += ""+grid.current.row+grid.current.col+n;
     location = urlState;
 
     displayGrid(grid);
+    return;
 
-  } else if (match = msg.match(/not possible at position (\d)(\d)/)) {
+  }
 
-    chain.push([match[1],match[2]]);
-    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
-    chain.forEach(function(m){
-      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
-    });
+  // something keeps us from setting: highlight problems
+  if (match = msg.match(/not possible at position (\d)(\d)/)) {
 
   } else if (match = msg.match(/not possible at row (\d)(\d)/)) {
 
-    chain.push([match[1],match[2]]);
-    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
-    chain.forEach(function(m){
-      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
-    });
     [0,1,2,3,4,5,6,7,8].forEach(function(c){
       document.getElementById(grid.id+"-b"+match[1]+c).className += " invalid";
     });
 
   } else if (match = msg.match(/not possible at column (\d)(\d)/)) {
 
-    chain.push([match[1],match[2]]);
-    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
-    chain.forEach(function(m){
-      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
-    });
     [0,1,2,3,4,5,6,7,8].forEach(function(r){
       document.getElementById(grid.id+"-b"+r+match[2]).className += " invalid";
     });
 
   } else if (match = msg.match(/not possible at block (\d)(\d)/)) {
 
-    chain.push([match[1],match[2]]);
-    document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
-    chain.forEach(function(m){
-      document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
-    });
     grid.blockCoords(+match[1],+match[2]).forEach(function(c){
       document.getElementById(grid.id+"-b"+c[0]+c[1]).className += " invalid";
     });
 
-  }
+  } else
+    throw ("setting failed for unknown reason: "+msg);
+
+  // highlight problem position and implied chain that led us there
+  document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
+  chain.forEach(function(m){
+    document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
+  });
 }
 
 function undo(f) {
@@ -261,11 +256,16 @@ function focus(event) {
   console.log("focus",event);
 
   if (event.target.className.indexOf("box")!==-1) {
+
     coord = /grid-b(\d)(\d)/.exec(event.target.id);
+
   } else if (event.target.parentNode.className.indexOf("box")!==-1) {
+
     coord = /grid-b(\d)(\d)/.exec(event.target.parentNode.id);
+
   } else
     return;
+
   grid.moveTo(+coord[1],+coord[2]);
   displayGrid(grid);
 }
@@ -307,12 +307,15 @@ function toggleRule(rule) {
 
 function displayGrid(grid) {
   var gridElement = document.getElementById(grid.id);
+
   // since the grid is re-generated from scratch,
   // temporary class hints (chain, invalid) disappear as well
   gridElement.innerHTML = grid.showHTML().join("<br>");
+
   var current   = grid.current;
   var currentId = grid.id+"-b"+current.row+current.col;
   document.getElementById(currentId).className += " current";
+
   var rules = "";
   for (var rule in grid.rules)
     if (grid.rules.hasOwnProperty(rule)) rules +=
