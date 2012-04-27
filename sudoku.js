@@ -1,4 +1,7 @@
+// Sudoku
+// Claus Reinke, 2012
 
+// fill in missing functionality
 if (typeof console==="undefined") console = {};
 if (typeof console.log==="undefined") console.log = function() {};
 
@@ -13,7 +16,10 @@ if (typeof Array.prototype.forEach!=="function")
     for (var i=0; i<this.length; i++) cb(this[i])
   };
 
-// Claus Reinke, 2012
+// small Sets (here for the digits 1-9) as arrays
+//
+// note: - remove updates in place, without returns modified copy
+//       - toArray leaks internal array reference
 function Set(arr) {
   this.arr = arr;
 }
@@ -32,11 +38,14 @@ Set.prototype = {
   toArray     : function() { return this.arr }
 };
 
+// sudoku grid
 function Grid(id) {
-  this.id      = id;
-  this.grid    = [];
-  this.current = {row:0, col:0};
-  this.log     = [];
+  this.id      = id;              // DOM id for grid element
+                                  // TODO: move id to view, pass in to showHTML
+  this.current = {row:0, col:0};  // current cursor position
+                                  // TODO: better stored in view?
+  this.grid    = [];              // 9x9 array of digit marker sets
+  this.log     = [];              // log of explicit (non-inferred) moves
   this.rules   = { markers:    {active:true
                                ,description:"update markers in row/column/block on every move"}
                  , singletons: {active:false
@@ -209,6 +218,7 @@ Grid.prototype = {
                   unique_column = "unique column",
                   unique_block  = "unique block";
 
+              // initialize per-group arrays
               for (r=0; r<9; r++)
                 row[r] = [1,2,3,4,5,6,7,8,9].map(function(d){return []});
               for (c=0; c<9; c++)
@@ -216,6 +226,7 @@ Grid.prototype = {
               for (b=0; b<9; b++)
                 block[b] = [1,2,3,4,5,6,7,8,9].map(function(d){return []});
 
+              // record each mark for each group
               for (r=0; r<9; r++)
                 for (c=0; c<9; c++)
                   for (d=1; d<10; d++)
@@ -225,6 +236,7 @@ Grid.prototype = {
                       block[Math.floor(r/3)*3+Math.floor(c/3)][d-1].push();
                     }
 
+              // filter marks that have a unique position in their group
               for (r=0; r<9; r++)
                 for (d=1; d<10; d++)
                   if (row[r][d-1].length===1)
@@ -241,6 +253,7 @@ Grid.prototype = {
                                     ,d
                                     ,unique_block]);
 
+              // remove uniques that are already singletons
               candidates = candidates.filter(function(s){
                                                return !(this.grid[s[0]][s[1]].isSingleton())
                                              }.bind(this));
