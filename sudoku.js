@@ -39,13 +39,9 @@ Set.prototype = {
 };
 
 // sudoku grid
-function Grid(id) {
-  this.id      = id;              // DOM id for grid element
-                                  // TODO: move id to view, pass in to showHTML
-  this.current = {row:0, col:0};  // current cursor position
-                                  // TODO: better stored in view?
-  this.grid    = [];              // 9x9 array of digit marker sets
-  this.log     = [];              // log of explicit (non-inferred) moves
+function Grid() {
+  this.grid    = []; // 9x9 array of digit marker sets
+  this.log     = []; // log of explicit (non-inferred) moves
   this.rules   = { markers:    {active:true
                                ,description:"update markers in row/column/block on every move"}
                  , singletons: {active:false
@@ -64,45 +60,8 @@ Grid.prototype = {
                     this.grid[row][col] = new Set([1,2,3,4,5,6,7,8,9]);
                 }
              },
-  showHTML : function() {
-              var self = this;
-              function div(cls,id,text) {
-                return "<div class='"+cls+"' id='"+self.id+"-"+id+"'>"
-                       +text+"</div>"
-              }
-              function span(cls,id,text) {
-                return "<span class='"+cls+"' id='"+self.id+"-"+id+"'>"
-                       +text+"</span>"
-              }
-              var box,line,lines=[];
-              for (var row=0; row<9; row++) {
-                line = "";
-                for (var col=0; col<9; col++) {
-                  if (this.grid[row][col].isSingleton()
-                    && (this.rules.singletons.active
-                     || this.rules.uniques.active
-                     || this.grid[row][col].set==="set"))
-                    line += div("box","b"+row+col,
-                            div(this.grid[row][col].set,
-                                "s"+row+col,
-                                this.grid[row][col].getElement()));
-                  else {
-                    box = ""
-                    for (var i=1; i<10; i++) {
-                      box += span("digit","d"+row+col+i,
-                                  this.grid[row][col].has(i) ? i : " ");
-                    }
-                    line += div("box","b"+row+col,box);
-                  }
-                }
-                lines.push(div("line","l"+row,line));
-              }
-              return lines;
-             },
   clone : function() {
-            var c = new Grid(this.id);  // TODO: move id to showHTML?
-            c.current.row = this.current.row;
-            c.current.col = this.current.col;
+            var c = new Grid();
             for (var row=0; row<9; row++) {
               c.grid[row] = [];
               for (var col=0; col<9; col++) {
@@ -275,7 +234,17 @@ Grid.prototype = {
                     for(var ci=0; ci<3; ci++)
                       b.push([3*r_+ri,3*c_+ci]);
                   return b;
-                 },
+                 }
+}
+
+// TODO: headed towards mixed view/controller, would it help to split further?
+function GridViewHelper(grid,id) {
+  this.grid    = grid;            // the data
+  this.id      = id;              // the target DOM element
+  this.current = {row:0, col:0};  // current cursor position
+}
+
+GridViewHelper.prototype = {
   moveTo : function(r,c) {
              this.current.row = r;
              this.current.col = c;
@@ -285,5 +254,42 @@ Grid.prototype = {
              this.current.row = (this.current.row+r+9)%9;
              this.current.col = (this.current.col+c+9)%9;
              return this.current;
-           }
+           },
+  showHTML : function() {
+              var self  = this;
+              var grid  = this.grid.grid;
+              var rules = this.grid.rules;
+              function div(cls,id,text) {
+                return "<div class='"+cls+"' id='"+self.id+"-"+id+"'>"
+                       +text+"</div>"
+              }
+              function span(cls,id,text) {
+                return "<span class='"+cls+"' id='"+self.id+"-"+id+"'>"
+                       +text+"</span>"
+              }
+              var box,line,lines=[];
+              for (var row=0; row<9; row++) {
+                line = "";
+                for (var col=0; col<9; col++) {
+                  if (grid[row][col].isSingleton()
+                    && (rules.singletons.active
+                     || rules.uniques.active
+                     || grid[row][col].set==="set"))
+                    line += div("box","b"+row+col,
+                            div(grid[row][col].set,
+                                "s"+row+col,
+                                grid[row][col].getElement()));
+                  else {
+                    box = ""
+                    for (var i=1; i<10; i++) {
+                      box += span("digit","d"+row+col+i,
+                                  grid[row][col].has(i) ? i : " ");
+                    }
+                    line += div("box","b"+row+col,box);
+                  }
+                }
+                lines.push(div("line","l"+row,line));
+              }
+              return lines;
+             }
 }

@@ -124,8 +124,9 @@ Please activate Javascript. This Sudoku App will not work without it.
 
 document.body.className = "js"; // JS enabled, hooray
 
-var grid = new Grid("grid");
+var grid = new Grid();
 var urlState = "#";
+var gridviewhelper = new GridViewHelper(grid,"grid");
 
 function initFromUrl() {
   if (location.hash) {
@@ -133,7 +134,8 @@ function initFromUrl() {
 
       var positions = location.hash.match(/\d/g);
       console.log(positions);
-      grid = new Grid("grid");
+      grid = new Grid();
+      gridviewhelper.grid = grid;
       urlState = "#";
       for (var i=0; i<positions.length; i++) {
         var num = +positions[i];
@@ -150,7 +152,8 @@ function initFromUrl() {
 
       var moves = location.hash.match(/\d\d\d/g);
       console.log( moves );
-      grid = new Grid("grid");
+      grid = new Grid();
+      gridviewhelper.grid = grid;
       for(var i=0; i<moves.length; i++) {
         var move = moves[i].match(/(\d)(\d)(\d)/);
         console.log(move);
@@ -167,7 +170,7 @@ function initFromUrl() {
                                    // also, not supported on old browsers
 
 function setCurrent(n) {
-  var result = grid.set(grid.current.row,grid.current.col,n);
+  var result = grid.set(gridviewhelper.current.row,gridviewhelper.current.col,n);
   var msg    = result[0], chain = result[1];
   var match;
 
@@ -180,7 +183,7 @@ function setCurrent(n) {
   // setting went okay, record & display
   if (msg.match(/set/)) {
 
-    urlState += ""+grid.current.row+grid.current.col+n;
+    urlState += ""+gridviewhelper.current.row+gridviewhelper.current.col+n;
     location = urlState;
 
     displayGrid(grid);
@@ -194,28 +197,28 @@ function setCurrent(n) {
   } else if (match = msg.match(/not possible at row (\d)(\d)/)) {
 
     [0,1,2,3,4,5,6,7,8].forEach(function(c){
-      document.getElementById(grid.id+"-b"+match[1]+c).className += " invalid";
+      document.getElementById(gridviewhelper.id+"-b"+match[1]+c).className += " invalid";
     });
 
   } else if (match = msg.match(/not possible at column (\d)(\d)/)) {
 
     [0,1,2,3,4,5,6,7,8].forEach(function(r){
-      document.getElementById(grid.id+"-b"+r+match[2]).className += " invalid";
+      document.getElementById(gridviewhelper.id+"-b"+r+match[2]).className += " invalid";
     });
 
   } else if (match = msg.match(/not possible at block (\d)(\d)/)) {
 
     grid.blockCoords(+match[1],+match[2]).forEach(function(c){
-      document.getElementById(grid.id+"-b"+c[0]+c[1]).className += " invalid";
+      document.getElementById(gridviewhelper.id+"-b"+c[0]+c[1]).className += " invalid";
     });
 
   } else
     throw ("setting failed for unknown reason: "+msg);
 
   // highlight problem position and implied chain that led us there
-  document.getElementById(grid.id+"-b"+match[1]+match[2]).className += " impossible";
+  document.getElementById(gridviewhelper.id+"-b"+match[1]+match[2]).className += " impossible";
   chain.forEach(function(m){
-    document.getElementById(grid.id+"-b"+m[0]+m[1]).className += " chain";
+    document.getElementById(gridviewhelper.id+"-b"+m[0]+m[1]).className += " chain";
   });
 }
 
@@ -229,7 +232,9 @@ function undo(current) {
   displayGrid(grid);
 }
 
-function toggleCurrent(d) { grid.toggleMark(grid.current,d); displayGrid(grid); }
+function toggleCurrent(d) {
+  grid.toggleMark(gridviewhelper.current,d); displayGrid(grid);
+}
 
 function move(event) {
   switch (event.keyCode) {
@@ -246,10 +251,10 @@ function move(event) {
     case 56: if (event.ctrlKey) toggleCurrent(8); else setCurrent(8); return;
     case 57: if (event.ctrlKey) toggleCurrent(9); else setCurrent(9); return;
     // arrows
-    case 37: grid.moveBy(0,-1); break;
-    case 39: grid.moveBy(0,1); break;
-    case 38: grid.moveBy(-1,0); break;
-    case 40: grid.moveBy(1,0); break;
+    case 37: gridviewhelper.moveBy(0,-1); break;
+    case 39: gridviewhelper.moveBy(0,1); break;
+    case 38: gridviewhelper.moveBy(-1,0); break;
+    case 40: gridviewhelper.moveBy(1,0); break;
   }
   displayGrid(grid);
 }
@@ -268,7 +273,7 @@ function focus(event) {
   } else
     return;
 
-  grid.moveTo(+coord[1],+coord[2]);
+  gridviewhelper.moveTo(+coord[1],+coord[2]);
   displayGrid(grid);
 }
 document.addEventListener("keydown",move,false);
@@ -293,7 +298,7 @@ for (row=1; row<10; row++)
     '<div class="button set" id="set-'+row+'" onmousedown="setCurrent('+row+')">'
    +'<div>'+row+'</div></div>';
 buttons.innerHTML +=
-  '<div class="button unmark" onmousedown="undo(grid.current)">'
+  '<div class="button unmark" onmousedown="undo(gridviewhelper.current)">'
  +digits('unmark',[1,2,3,4,5,6,7,8,9])+'</div>';
 for (row=1; row<10; row++)
   buttons.innerHTML +=
@@ -308,14 +313,15 @@ function toggleRule(rule) {
 }
 
 function displayGrid(grid) {
-  var gridElement = document.getElementById(grid.id);
+  var gridElement = document.getElementById(gridviewhelper.id);
 
   // since the grid is re-generated from scratch,
   // temporary class hints (chain, invalid) disappear as well
-  gridElement.innerHTML = grid.showHTML().join("<br>");
+  // TODO: what about hand-tuned markers?
+  gridElement.innerHTML = gridviewhelper.showHTML().join("<br>");
 
-  var current   = grid.current;
-  var currentId = grid.id+"-b"+current.row+current.col;
+  var current   = gridviewhelper.current;
+  var currentId = gridviewhelper.id+"-b"+current.row+current.col;
   document.getElementById(currentId).className += " current";
 
   var rules = "";
