@@ -219,8 +219,8 @@ function setCurrent(n) {
   });
 }
 
-function undo(f) {
-  grid.undo(f);
+function undo(current) {
+  grid.undo(current);
   urlState = "#";
   for (var i=0; i<grid.log.length; i++)
     urlState += ""+grid.log[i][0]+grid.log[i][1]+grid.log[i][2];
@@ -229,7 +229,7 @@ function undo(f) {
   displayGrid(grid);
 }
 
-function toggleCurrent(d) { grid.toggleCurrent(d); displayGrid(grid); }
+function toggleCurrent(d) { grid.toggleMark(grid.current,d); displayGrid(grid); }
 
 function move(event) {
   switch (event.keyCode) {
@@ -293,7 +293,7 @@ for (row=1; row<10; row++)
     '<div class="button set" id="set-'+row+'" onmousedown="setCurrent('+row+')">'
    +'<div>'+row+'</div></div>';
 buttons.innerHTML +=
-  '<div class="button unmark" onmousedown="undo(true)">'
+  '<div class="button unmark" onmousedown="undo(grid.current)">'
  +digits('unmark',[1,2,3,4,5,6,7,8,9])+'</div>';
 for (row=1; row<10; row++)
   buttons.innerHTML +=

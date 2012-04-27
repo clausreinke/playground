@@ -154,15 +154,15 @@ Grid.prototype = {
           this.log.push([r,c,n]);
           return ["set "+n+" at "+r+c,chain];
         },
-  undo : function(current) {
+  undo : function(position) {
             this.initGrid();
-            var log = this.log, self = this;
-            if (current) // drop current
+            var log = this.log;
+            if (position) // drop move at position
               log = log.filter(function(move){
-                                return(move[0]!==self.current.row)
-                                    ||(move[1]!==self.current.col)
+                                return(move[0]!==position.row)
+                                    ||(move[1]!==position.col)
                                })
-            else // drop last
+            else // drop last move
               log.pop();
             this.log = [];
             for (var move=0; move<log.length; move++) {
@@ -177,15 +177,16 @@ Grid.prototype = {
                this.set(log[move][0],log[move][1],log[move][2]);
              }
            },
-  toggleCurrent : function(n) { // TODO: check implied singletons are valid!
-                    var curset = this.grid[this.current.row][this.current.col];
-                    if (curset.has(n)) {
-                      if (!curset.isSingleton()) curset.remove(n);
-                    } else
-                      curset.insert(n);
-                  },
+  toggleMark : function(position,n) { // TODO: check implied singletons are valid!
+                 var curset = this.grid[position.row][position.col];
+                 if (curset.has(n)) {
+                   if (!curset.isSingleton()) curset.remove(n);
+                 } else
+                   curset.insert(n);
+               },
   group_without : function(r,c,n,coords) { // group (by coords) containing box rc
                                            // remove mark n from other boxes in group
+                                           // return implied empties and singletons
                     var empties = [], singletons = [], box, wasSingleton = false;
                     coords(r,c).forEach(function(rc) {
                       var ri = rc[0], ci = rc[1];
