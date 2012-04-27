@@ -157,9 +157,10 @@ Grid.prototype = {
 
           if (this.rules.markers.active)
             this.grid = next.grid;
-          else
+          else {
             this.grid[r][c] = new Set([n]);
-          // this.grid[r][c].set = "set";
+            this.grid[r][c].set = "set";
+          }
           this.log.push([r,c,n]);
           return ["set "+n+" at "+r+c,chain];
         },
