@@ -1,0 +1,348 @@
+<!doctype html>
+<html>
+
+<head>
+<script src="sudoku.js">
+</script>
+<style type="text/css">
+#grid    { font-size: small; float: left; min-width: 29em }
+#log     { font-size: small; float: right }
+#buttons { font-size: small; font-weight: bold; min-width: 29em;
+           float: left; clear: left }
+#message { float: left; clear: left }
+#rules   { font-weight: bold }
+
+.rule.true        { color: green; }
+.rule.true:after  { content: " on"; }
+.rule.false:after { content: " off"; }
+
+.digit          { position: absolute; padding-left: 0.25em; color: grey }
+.digit[id$="1"] { left:0em; top:0em }
+.digit[id$="2"] { left:1em; top:0em }
+.digit[id$="3"] { left:2em; top:0em }
+.digit[id$="4"] { left:0em; top:1em }
+.digit[id$="5"] { left:1em; top:1em }
+.digit[id$="6"] { left:2em; top:1em }
+.digit[id$="7"] { left:0em; top:2em }
+.digit[id$="8"] { left:1em; top:2em }
+.digit[id$="9"] { left:2em; top:2em }
+
+.box   { position: relative; float: left; height: 3em; width: 3em; }
+.box[id*="-b0"]
+  { border-top-style: solid; border-top-width: 2px }
+.box[id*="-b8"]
+  { border-bottom-style: solid; border-bottom-width: 2px }
+.box[id$="0"]
+  { border-left-style: solid; border-left-width: 2px }
+.box[id$="8"]
+  { border-right-style: solid; border-right-width: 2px }
+.box[id$="0"],.box[id$="1"],
+.box[id$="3"],.box[id$="4"],
+.box[id$="6"],.box[id$="7"]
+  { border-right-style: dotted; border-right-width: 1px }
+.box[id*="-b0"],.box[id*="-b1"],
+.box[id*="-b3"],.box[id*="-b4"],
+.box[id*="-b6"],.box[id*="-b7"]
+  { border-bottom-style: dotted; border-bottom-width: 1px }
+.box[id$="2"],.box[id$="5"]
+  { border-right-style: solid; border-right-width: 2px }
+.box[id*="-b2"],.box[id*="-b5"]
+  { border-bottom-style: solid; border-bottom-width: 2px }
+.box .singleton, .box .set, .box .unique
+  { text-align: center; font-weight: bold;
+    font-size: large; border: thin solid;
+    margin: 1px; height: 90% }
+.box .singleton
+  { background-color: lightgrey }
+.box .unique
+  { background-color: #EDEDB4 }
+.box .set
+  { background-color: lightgreen }
+
+.line       { clear: both }
+.current    { background-color: lightblue }
+.invalid    { background-color: red }
+.chain      { background-color: orange }
+.impossible { background-color: yellow }
+
+.button          { float: left; height: 3em; width: 2.7em;
+                   border-left: thin solid; border-bottom: thin solid; }
+.button.undo     { background-color: red }
+.button.undo div { font-size: larger; text-align: center }
+.button.set      { background-color: lightgreen }
+.button.unmark   { background-color: lightblue; position: relative; clear: both }
+.button.toggle   { background-color: lightblue; position: relative }
+.button[id$="9"] { border-right: thin solid }
+.button.set div  { text-align: center; font-size: larger }
+
+#games a         { display: block }
+
+.no-js .js-only  { display: none }
+.js .noscript    { display: none }
+</style>
+
+</head>
+
+<body class="no-js">
+
+<div class="noscript">
+Please activate Javascript. This Sudoku App will not work without it.
+</div>
+
+<div class="js-only">
+<div id="grid"></div>
+<div id="log"></div>
+<div id="buttons"></div>
+<div id="message"></div>
+<div id="rules"></div>
+
+<div id="games">
+<a href="javascript:location.hash='#071104212345364387428463521549603634662715731838856';initFromUrl()">Game 1</a>
+
+<a href="javascript:location.hash='#f980500000000000610000000000037080000000600200010000000400000905000031000200000000';initFromUrl()">Game 2</a>
+
+<a href="javascript:location.hash='#f080070400000030060000000000000100800703000000600000000200009030000801009000400000';initFromUrl()">Game 3</a>
+
+<a href="javascript:location.hash='#f007860000000000901020000000350000000000600040900000000002400080100009500000000000';initFromUrl()">Game 4</a>
+
+<a href="javascript:location.hash='#f006087000200000009000030100900400000000000850000000060000900001058000000070000000';initFromUrl()">Game 5</a>
+
+<a href="javascript:location.hash='#f005008401620700000000000000700000630300200000000010000000300090004000000010000000';initFromUrl()">Game 6</a>
+
+<a href="javascript:location.hash='#f004000900080000200000010000700000015005200000000000080300600400010005000000000070';initFromUrl()">Game 7</a>
+
+<a href="javascript:location.hash='#f003000090000104000000700000000030080400005000600000700000600104020080000000000600';initFromUrl()">Game 8</a>
+
+<a href="javascript:location.hash='#f002560000000000010000400000170008000000000509080000000300071000005000400000000200';initFromUrl()">Game 9</a>
+
+<a href="javascript:location.hash='#f001000034600009000000000070000020600037000000050008000400000200000730000000100000';initFromUrl()">Game 10</a>
+</div>
+</div>
+
+<script>
+// TODO: replace string-DOM with createElements
+
+document.body.className = "js"; // JS enabled, hooray
+
+var grid = new Grid();
+var urlState = "#";
+var gridviewhelper = new GridViewHelper(grid,"grid");
+
+function initFromUrl() {
+  if (location.hash) {
+    if (location.hash.match(/^#f/)) { // full list of positions: num or 0
+
+      var positions = location.hash.match(/\d/g);
+      console.log(positions);
+      grid = new Grid();
+      gridviewhelper.grid = grid;
+      urlState = "#";
+      for (var i=0; i<positions.length; i++) {
+        var num = +positions[i];
+        if (num!==0) {
+          var row = Math.floor(i/9),
+              col = i%9;
+          grid.set(row,col,num);
+          urlState += ""+row+col+num;
+        }
+      }
+      location.hash = urlState;
+
+    } else { // list of moves: row-col-num
+
+      var moves = location.hash.match(/\d\d\d/g);
+      console.log( moves );
+      grid = new Grid();
+      gridviewhelper.grid = grid;
+      for(var i=0; i<moves.length; i++) {
+        var move = moves[i].match(/(\d)(\d)(\d)/);
+        console.log(move);
+        grid.set(+move[1],+move[2],+move[3]);
+      }
+      urlState = location.hash;
+
+    }
+  }
+  displayGrid(grid);
+}
+
+// window.onhashchange = initFromUrl; // double init, if called explicitly..
+                                   // also, not supported on old browsers
+
+function setCurrent(n) {
+  var result = grid.set(gridviewhelper.current.row,gridviewhelper.current.col,n);
+  var msg    = result[0], chain = result[1];
+  var match;
+
+  console.log(msg,chain);
+  document.getElementById("message").innerHTML = msg+" : "
+    +chain.map(function(m){return ""+m[0]+m[1]+":"+m[2]}).join("|");
+
+  displayGrid(grid);
+
+  // setting went okay, record & display
+  if (msg.match(/set/)) {
+
+    urlState += ""+gridviewhelper.current.row+gridviewhelper.current.col+n;
+    location = urlState;
+
+    displayGrid(grid);
+    return;
+
+  }
+
+  // something keeps us from setting: highlight problems
+  if (match = msg.match(/not possible at position (\d)(\d)/)) {
+
+  } else if (match = msg.match(/not possible at row (\d)(\d)/)) {
+
+    [0,1,2,3,4,5,6,7,8].forEach(function(c){
+      document.getElementById(gridviewhelper.id+"-b"+match[1]+c).className += " invalid";
+    });
+
+  } else if (match = msg.match(/not possible at column (\d)(\d)/)) {
+
+    [0,1,2,3,4,5,6,7,8].forEach(function(r){
+      document.getElementById(gridviewhelper.id+"-b"+r+match[2]).className += " invalid";
+    });
+
+  } else if (match = msg.match(/not possible at block (\d)(\d)/)) {
+
+    grid.blockCoords(+match[1],+match[2]).forEach(function(c){
+      document.getElementById(gridviewhelper.id+"-b"+c[0]+c[1]).className += " invalid";
+    });
+
+  } else
+    throw ("setting failed for unknown reason: "+msg);
+
+  // highlight problem position and implied chain that led us there
+  document.getElementById(gridviewhelper.id+"-b"+match[1]+match[2]).className += " impossible";
+  chain.forEach(function(m){
+    document.getElementById(gridviewhelper.id+"-b"+m[0]+m[1]).className += " chain";
+  });
+}
+
+function undo(current) {
+  grid.undo(current);
+  urlState = "#";
+  for (var i=0; i<grid.log.length; i++)
+    urlState += ""+grid.log[i][0]+grid.log[i][1]+grid.log[i][2];
+  location = urlState;
+
+  displayGrid(grid);
+}
+
+function toggleCurrent(d) {
+  grid.toggleMark(gridviewhelper.current,d); displayGrid(grid);
+}
+
+function move(event) {
+  switch (event.keyCode) {
+    // backspace
+    case  8: undo(); return;
+    // digits
+    case 49: if (event.ctrlKey) toggleCurrent(1); else setCurrent(1); return;
+    case 50: if (event.ctrlKey) toggleCurrent(2); else setCurrent(2); return;
+    case 51: if (event.ctrlKey) toggleCurrent(3); else setCurrent(3); return;
+    case 52: if (event.ctrlKey) toggleCurrent(4); else setCurrent(4); return;
+    case 53: if (event.ctrlKey) toggleCurrent(5); else setCurrent(5); return;
+    case 54: if (event.ctrlKey) toggleCurrent(6); else setCurrent(6); return;
+    case 55: if (event.ctrlKey) toggleCurrent(7); else setCurrent(7); return;
+    case 56: if (event.ctrlKey) toggleCurrent(8); else setCurrent(8); return;
+    case 57: if (event.ctrlKey) toggleCurrent(9); else setCurrent(9); return;
+    // arrows
+    case 37: gridviewhelper.moveBy(0,-1); break;
+    case 39: gridviewhelper.moveBy(0,1); break;
+    case 38: gridviewhelper.moveBy(-1,0); break;
+    case 40: gridviewhelper.moveBy(1,0); break;
+  }
+  displayGrid(grid);
+}
+function focus(event) {
+  var coord;
+  console.log("focus",event);
+
+  if (event.target.className.indexOf("box")!==-1) {
+
+    coord = /grid-b(\d)(\d)/.exec(event.target.id);
+
+  } else if (event.target.parentNode.className.indexOf("box")!==-1) {
+
+    coord = /grid-b(\d)(\d)/.exec(event.target.parentNode.id);
+
+  } else
+    return;
+
+  gridviewhelper.moveTo(+coord[1],+coord[2]);
+  displayGrid(grid);
+}
+document.addEventListener("keydown",move,false);
+document.getElementById("grid").addEventListener("mousedown",focus,false);
+
+(function(){
+var row, buttons = document.getElementById("buttons");
+
+function digits(n,ns) {
+  var ds = "";
+  for(var d=1; d<10; d++)
+    ds += '<span class="digit" id="toggle-'+n+d+'">'
+          +(ns.indexOf(d)!==-1?d:'.')+'</span>';
+  return ds;
+}
+
+buttons.innerHTML +=
+  '<div class="button undo" onmousedown="undo()">'
+ +'<div>&lt;</div></div>';
+for (row=1; row<10; row++)
+  buttons.innerHTML +=
+    '<div class="button set" id="set-'+row+'" onmousedown="setCurrent('+row+')">'
+   +'<div>'+row+'</div></div>';
+buttons.innerHTML +=
+  '<div class="button unmark" onmousedown="undo(gridviewhelper.current)">'
+ +digits('unmark',[1,2,3,4,5,6,7,8,9])+'</div>';
+for (row=1; row<10; row++)
+  buttons.innerHTML +=
+    '<div class="button toggle" id="toggle-button-'+row+'" onmousedown="toggleCurrent('+row+')">'
+   +digits(row,[row])+'</div>';
+}());
+
+function toggleRule(rule) {
+  grid.rules[rule].active = !grid.rules[rule].active;
+  grid.replay();
+  displayGrid(grid);
+}
+
+function displayGrid(grid) {
+  var gridElement = document.getElementById(gridviewhelper.id);
+
+  // since the grid is re-generated from scratch,
+  // temporary class hints (chain, invalid) disappear as well
+  // TODO: what about hand-tuned markers?
+  gridElement.innerHTML = gridviewhelper.showHTML().join("<br>");
+
+  var current   = gridviewhelper.current;
+  var currentId = gridviewhelper.id+"-b"+current.row+current.col;
+  document.getElementById(currentId).className += " current";
+
+  var rules = "";
+  for (var rule in grid.rules)
+    if (grid.rules.hasOwnProperty(rule)) rules +=
+      '<div class="rule '+grid.rules[rule].active+'" '
+      +'title="'+grid.rules[rule].description+'" '
+      +'onmousedown="toggleRule(\''+rule+'\')">'
+      +rule
+      +'</div>';
+  document.getElementById("rules").innerHTML = rules;
+  /*
+  document.getElementById("log").innerHTML =
+    grid.log.map(function(m){
+                  return"<div class='move'>"+m[0]+m[1]+":"+m[2]+"</div>"
+                 }).join("");
+   */
+}
+
+initFromUrl();
+</script>
+</body>
+
+</html>
