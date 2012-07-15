@@ -24,6 +24,7 @@ function openGithubIssue() {
             +',"labels":["new info"]'
             +'}';
   xhr.open('POST','https://api.github.com/repos/clausreinke/playground/issues');
+  xhr.withCredentials = 'true';
   xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
   xhr.responseType = "json";
   xhr.send(data);
