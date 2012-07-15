@@ -20,9 +20,9 @@ function openGithubIssue() {
     }
   };
   var data = '{"title":"test ticket add <name.value>"'  // be careful with content injection
-             +'"body": "<info>"'
-             +'"labels":["new info"]'
-             +'}';
+            +',"body": "<info>"'
+            +',"labels":["new info"]'
+            +'}';
   xhr.open('POST','https://api.github.com/repos/clausreinke/playground/issues');
   xhr.setRequestHeader("Content-Type", "text/plain;charset=UTF-8");
   xhr.responseType = "json";
