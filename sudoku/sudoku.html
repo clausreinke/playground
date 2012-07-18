@@ -169,10 +169,15 @@ function initFromUrl() {
 // window.onhashchange = initFromUrl; // double init, if called explicitly..
                                    // also, not supported on old browsers
 
+function gridBox(row,col) {
+  return document.getElementById(gridviewhelper.id+"-b"+row+col)
+}
+
 function setCurrent(n) {
   var result = grid.set(gridviewhelper.current.row,gridviewhelper.current.col,n);
   var msg    = result[0], chain = result[1];
   var match;
+  var group;
 
   console.log(msg,chain);
   document.getElementById("message").innerHTML = msg+" : "
@@ -192,33 +197,34 @@ function setCurrent(n) {
   }
 
   // something keeps us from setting: highlight problems
+  // determine problem group
   if (match = msg.match(/not possible at position (\d)(\d)/)) {
+
+    group = [];
 
   } else if (match = msg.match(/not possible at row (\d)(\d)/)) {
 
-    [0,1,2,3,4,5,6,7,8].forEach(function(c){
-      document.getElementById(gridviewhelper.id+"-b"+match[1]+c).className += " invalid";
-    });
+    group = grid.rowCoords(+match[1],+match[2]);
 
   } else if (match = msg.match(/not possible at column (\d)(\d)/)) {
 
-    [0,1,2,3,4,5,6,7,8].forEach(function(r){
-      document.getElementById(gridviewhelper.id+"-b"+r+match[2]).className += " invalid";
-    });
+    group = grid.columnCoords(+match[1],+match[2]);
 
   } else if (match = msg.match(/not possible at block (\d)(\d)/)) {
 
-    grid.blockCoords(+match[1],+match[2]).forEach(function(c){
-      document.getElementById(gridviewhelper.id+"-b"+c[0]+c[1]).className += " invalid";
-    });
+    group = grid.blockCoords(+match[1],+match[2]);
 
   } else
     throw ("setting failed for unknown reason: "+msg);
 
+  // highlight problem group
+  group.forEach(function(c){
+    gridBox(c[0],c[1]).className += " invalid";
+  })
   // highlight problem position and implied chain that led us there
-  document.getElementById(gridviewhelper.id+"-b"+match[1]+match[2]).className += " impossible";
+  gridBox(match[1],match[2]).className += " impossible";
   chain.forEach(function(m){
-    document.getElementById(gridviewhelper.id+"-b"+m[0]+m[1]).className += " chain";
+    gridBox(m[0],m[1]).className += " chain";
   });
 }
 
@@ -291,18 +297,18 @@ function digits(n,ns) {
 }
 
 buttons.innerHTML +=
-  '<div class="button undo" onmousedown="undo()">'
+  '<div class="button undo" title="undo move" onmousedown="undo()">'
  +'<div>&lt;</div></div>';
 for (row=1; row<10; row++)
   buttons.innerHTML +=
-    '<div class="button set" id="set-'+row+'" onmousedown="setCurrent('+row+')">'
+    '<div class="button set" id="set-'+row+'" title="set" onmousedown="setCurrent('+row+')">'
    +'<div>'+row+'</div></div>';
 buttons.innerHTML +=
-  '<div class="button unmark" onmousedown="undo(gridviewhelper.current)">'
+  '<div class="button unmark" title="reset marks" onmousedown="undo(gridviewhelper.current)">'
  +digits('unmark',[1,2,3,4,5,6,7,8,9])+'</div>';
 for (row=1; row<10; row++)
   buttons.innerHTML +=
-    '<div class="button toggle" id="toggle-button-'+row+'" onmousedown="toggleCurrent('+row+')">'
+    '<div class="button toggle" id="toggle-button-'+row+'" title="toggle mark" onmousedown="toggleCurrent('+row+')">'
    +digits(row,[row])+'</div>';
 }());
 
