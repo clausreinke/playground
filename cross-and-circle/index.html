@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="height=device-height, initial-scale=1.0">
+
+<title>circle and cross variations</title>
+
+<!-- Claus Reinke, 2012; work in progress -->
+
+<style>
+body     { background-color: #08b008 }
+
+.home.red     { background-color: #ffa0a0; }
+.home.green   { background-color: lightgreen; }
+.home.blue    { background-color: lightblue; }
+.home.yellow  { background-color: #F6F5CB; }
+.home.purple  { background-color: #E6ACE0; }
+.home.lime    { background-color: #21DD21; }
+
+.marker.red     { background-color: red; }
+.marker.green   { background-color: green; }
+.marker.blue    { background-color: blue; }
+.marker.yellow  { background-color: yellow; }
+.marker.purple  { background-color: purple; }
+.marker.lime    { background-color: lime; }
+.marker.done    { background-color: gold; }
+
+.place   { background-color: gold; }
+
+/* TODO: border-radius fallbacks for other old browsers? */
+
+.home,
+.place   { border: thin solid;
+           -webkit-border-radius: 1em; /* very old browsers */
+           -webkit-border-radius: 50%;
+           border-radius: 50%;
+           position: absolute;
+           width: 5%;
+           height: 5%;
+         }
+
+.start   { border-width: medium;  /* UA-dependent ?? */
+           -webkit-box-sizing: border-box;
+           -moz-box-sizing: border-box;
+           -ms-box-sizing: border-box;
+           -o-box-sizing: border-box;
+           box-sizing: border-box;
+         }
+
+.last_selected { background-color: yellow; }
+
+.candidate,
+.move_out    { border-width: medium;  /* UA-dependent ?? */
+               background-color: yellow;
+               border-color: red;
+             }
+
+.marker  { border: thin solid;
+           position: relative;
+           -webkit-border-radius: 1em; /* very old browsers */
+           -webkit-border-radius: 50%;
+           border-radius: 50%;
+           width: 30%;
+           height: 30%;
+           top: 10%;  /* use with body span */
+           top: 35%;  /* use without body span */
+           left: 35%;
+         }
+.candidate .marker,
+.move_out  .marker,
+.start     .marker  { /* compensate for medium border */
+                      top:  5%;  /* use with body span */
+                      top: 25%;  /* use without body span */
+                    }
+
+.marker span { box-sizing: border-box;
+               display: block; /* add marker body; border-width doesn't scale .. */
+               display: none; /* skip marker body, avoid scaling issues */
+               border: 10px solid;
+               /* border-width: 50%; */ /* wouldn't it be nice.. */
+               border-color: transparent transparent black transparent;
+               background-color: transparent;
+               position: relative;
+               /*
+               top: calc(30%-10px);  .. not yet
+               */
+               top: 0%;
+               left: -25%;
+               width: 30%;
+               height: 0%;
+             }
+
+.current { position: absolute;
+           top: 49.5%;
+           left: 50%;
+           width: 7%;
+           height: 5%;
+           border: thin solid black;
+           -webkit-border-radius: 0.5em; /* very old browsers */
+           -webkit-border-radius: 10%;
+           border-radius: 10%;
+           background-color: lightgrey;
+         }
+.current[title='next turn'] { border: thin solid red; }
+
+.current .marker { width: 30%;
+                   height: 30%;
+                   top: 20%;
+                   left: 10%;
+                   margin-left: 0%;
+                   margin-top: 0%;
+                 }
+.current .marker span { left: 0%; }
+
+.die     { border: thin solid;
+           -webkit-border-radius: 0.2em; /* very old browsers */
+           -webkit-border-radius: 20%;
+           border-radius: 20%;
+           top: 20%;
+           left: 50%;
+           width: 40%;
+           height: 60%;
+           background-color: white;
+           position: absolute;
+           margin-left: 4%;
+         }
+.die:not([data-die="0"]):after { content: attr(data-die);
+                                 font-weight: bold;
+                                 /* NOTE: font-size control in drawBoard */
+                                 vertical-align: text-top;
+                                 margin-top: 20%;
+                                 margin-left: 40%;
+                               }
+
+/*
+.place:first-child { counter-reset: p 0 }
+.place:after { content: counter(p);
+               counter-increment: p 1;
+             }
+*/
+
+#board  { min-width: 100%;
+          min-height: 100%;
+        }
+</style>
+
+</head>
+
+<body onload="document.body.style.height = (window.outerHeight + 100) + 'px'; ">
+
+<div id="board">
+</div>
+</div>
+
+<noscript>
+Sorry, this game depends on Javascript. Please enable Javascript and reload.
+</noscript>
+
+<script>
+
+// fill in missing functionality
+if (typeof console==="undefined") console = {};
+if (typeof console.log==="undefined") console.log = function() {};
+
+if (typeof Function.prototype.bind!=="function")
+  Function.prototype.bind = function(it) {
+    var f = this;
+    return function() { return f.apply(it,arguments) }
+  };
+
+if (typeof Array.prototype.forEach!=="function")
+  Array.prototype.forEach = function(cb){
+    for (var i=0; i<this.length; i++) cb(this[i])
+  };
+
+function colorMap(colors,f) {
+  var map = {}, i = 0;
+  colors.forEach(function(c){
+    map[c] = f(c,i++,colors);
+  });
+  return map;
+}
+
+var PLAY = 1, REPLAY = 0, relayserver = false;
+var allColours = ['red','green','blue','yellow','purple','lime'];
+
+function Game(n) {
+  this.colors  = allColours.slice(0,n);
+  this.cycle   = this.colors.length*9;
+
+  var  homes   = colorMap(this.colors,function(c,i){return i*9});
+  homes.radii  = [0.8,0.6,0.4,0.2];
+  this.homes   = homes;
+  this.starts  = this.colors.map(function(c){ return homes[c] });
+
+  this.home    = colorMap(this.colors,function(c){return [0,1,2,3]});
+  this.done    = colorMap(this.colors,function(c){return []});
+  this.markers = colorMap(this.colors,function(c){return []});
+
+  this.next    = this.colors[ Math.round( Math.random() * (this.colors.length-1) ) ];
+  this.current = this.next;
+  this.die     = 0;
+
+  this.candidates    = [];  // move candidates for user selection
+  this.last_selected = -1;  // for orientation
+  this.attempts      = [];  // none out -> three attempts to throw a 6
+
+  this.move_ = skip;       // user selection continuation
+  this.turn  = move(PLAY); // throw die and prepare user selection
+}
+
+var game  = new Game(3);
+var board = document.getElementById('board');
+
+// TODO: title can be annoying
+board.title = "type +/- to add/remove players; \n"  // TODO: GUI alternative
+            + "tap centre or type n for next turn; \n"
+            + "tap highlighted to select move"
+function keyHandler(event) {
+  if (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return;
+  // console.log(event.keyCode);
+  switch (event.keyCode) {
+    case 109: // -
+      game = new Game(Math.max(0,game.colors.length-1));
+      event.preventDefault();
+      event.stopPropagation();
+      drawBoard(skip,move(PLAY));
+      break;
+    case  61: // +
+      game = new Game(Math.min(6,game.colors.length+1));
+      event.preventDefault();
+      event.stopPropagation();
+      drawBoard(skip,move(PLAY));
+      break;
+    case  78: // n
+      if (game.turn) { game.turn(); }
+      break;
+  }
+}
+
+function drawBoard(next,turn) {
+  var h = (document.documentElement.clientHeight-80)/2;
+  var w = (document.documentElement.clientWidth-80)/2;
+  var d = Math.min(h,w);
+
+  var view = [];
+  var marker_color = [];
+  game.colors.forEach(function(c){
+    game.markers[c].forEach(function(m){
+      marker_color[m] = c;
+    })
+  });
+  for (var i=0; i<game.cycle; i++) {
+    view.push('<div class="place'
+                         +(game.starts.indexOf(i)>-1 ? ' start' : '')
+                         +'"'
+                    +' style="top: '+(50-40*Math.cos(-i*2*Math.PI/game.cycle))+'%;'
+                           +'left: '+(50+40*Math.sin(-i*2*Math.PI/game.cycle))+'%">'
+                +(marker_color[i]
+                 ? '<div class="marker '+marker_color[i]+'"'+'><span></span></div>'
+                 : '')
+             +'</div>');
+  }
+
+  game.colors.forEach(function(c){
+    var i    = game.homes[c];
+    var home = game.home[c];
+    var done = game.done[c];
+    var j    = 0;
+    game.homes.radii.forEach(function(r) {
+      view.push('<div class="home '+c+'"'
+                      +' style="top: '+(50-r*40*Math.cos(-i*2*Math.PI/game.cycle))+'%;'
+                             +'left: '+(50+r*40*Math.sin(-i*2*Math.PI/game.cycle))+'%">'
+                +(done.indexOf(j)>-1
+                ? '<div class="marker done '+c+'"'+'><span></span></div>'
+                : '')
+                +(home.indexOf(j++)>-1
+                ? '<div class="marker '+c+'"'+'><span></span></div>'
+                : '')
+               +'</div>');
+    });
+  });
+
+  view.push('<div class="current" id="current" '+(turn ? 'title="next turn"' : '')+'>'
+           +'<div class="die" id="die" data-die="'+game.die+'"></div>'
+           +game.attempts.map(function(d,i){
+              return '<div class="die"'
+                        +' data-die="'+d+'"'
+                        +' style="left: '+(200-i*40)+'%;'
+                                +(game.colors.length===4   // keep dice and
+                                 ? ' top: -50%;'           // homes apart
+                                 :game.colors.length===5
+                                 ? ' top: 50%;'
+                                 : '')
+                                +' opacity: .33"></div>'
+            }).join('\n')
+           +'<div class="marker '+game.next+'"><span></span></div>'
+           +'</div>');
+
+  board.innerHTML = view.join('\n');
+
+  if (game.last_selected>=0) {
+    board.children[game.last_selected].className += ' last_selected';
+  }
+  game.candidates.forEach(function(m){
+    var place = board.children[m[1]];
+    place.className += m[1]===m[2] ? ' move_out' : ' candidate';
+    place.title      = m[1]===m[2] ? 'move out' : 'move this';
+    place.addEventListener('click', next(m[1]), false);
+  });
+  if (turn) {
+    document.getElementById('current').addEventListener('click', turn, false);
+  }
+  // TODO: try a single event listener, branching on event target;
+  //       need to get rid of old listeners
+
+  document.getElementById('current').style.fontSize =
+    window.getComputedStyle(document.getElementById('die'),'').height;
+  /*
+  var divs = document.getElementsByTagName('div');
+  for (var div=0; div<divs.length; div++) {
+    // div.style.fontSize = div.offsetHeight;
+  }
+  */
+
+  game.move_ = next;
+  game.turn  = turn;
+
+  /*
+  var wm = document.querySelector('.marker').offsetWidth;
+  var hm = document.querySelector('.marker').offsetHeight;
+  var ws = document.querySelector('.marker span').offsetWidth;
+  console.log(hm,wm,ws);
+  var spans = document.getElementsByTagName('span');
+  for (var span=0; span<spans.length; span++) {
+    spans[span].style.borderWidth = parseFloat(hm,10)*2+'px';
+    spans[span].style.top         = '-'+parseFloat(hm,10)+'px';
+    spans[span].style.left        = '-'+parseFloat(hm,10)*2+'px';
+  }
+  */
+}
+
+function throw_die() {
+  game.die = Math.ceil( Math.random()*6 );
+}
+
+function listCandidates() {
+  game.candidates = [];
+  game.markers[game.current].forEach(function(m,i) {
+    var target = (m+game.die)%game.cycle;
+    if (game.markers[game.current].indexOf(target)===-1) {
+      game.candidates.push([i,m,target])
+    }
+  });
+}
+
+function casualties(target) {
+  if (target>=0) {
+    // any casualties?
+    game.colors.forEach(function(c){
+      if (c!==game.current) {
+        if ((which = game.markers[c].indexOf(target))>-1) {
+          // return home
+          game.markers[c].splice(which,1);
+          game.home[c].push(game.home[c].length);
+        }
+      }
+    });
+  }
+}
+
+function skip() {}
+
+function post(url,obj) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST',url);
+  if (gameviewer) { xhr.setRequestHeader('gameviewer',gameviewer); }
+  xhr.setRequestHeader('Content-Type','application/json;charset=UTF-8');
+  xhr.send(JSON.stringify(obj));
+}
+
+function broadcast(move) {
+  console.log(JSON.stringify(move));
+  if (relayserver) { post('/move',move); }
+}
+
+var gameviewer;
+function longpoll(url,callback) {
+  console.log('longpoll '+url);
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET',url,true);
+  if (gameviewer) { xhr.setRequestHeader('gameviewer',gameviewer); }
+  xhr.onreadystatechange = function(){
+    if (xhr.readyState===4 && xhr.status===200) {
+      if (xhr.getResponseHeader('Content-Type').match('application/json')) {
+        gameviewer = xhr.getResponseHeader('gameviewer');
+        var obj = JSON.parse(xhr.responseText);
+        console.log('incoming',obj);
+        callback(obj);
+        longpoll(url,callback);
+      }
+    }
+  };
+  xhr.send();
+}
+
+function replay(obj) {
+  if (!obj || !obj.length || obj.length<2) { return }
+  // TODO: sync full Game state
+  //       avoid communication lag (find source first..)
+  game = obj[1];
+  switch (obj[0]) {
+    case 'unblockStart':
+      unblockStart(REPLAY,obj[2],obj[3])(obj[4])();
+      break;
+    case 'moveOut':
+      moveOut(REPLAY)(obj[2])();
+      break;
+    case 'moveSelectedMarker':
+      moveSelectedMarker(REPLAY)(obj[2])();
+      break;
+    case 'move':
+      move(REPLAY)();
+      break;
+  }
+}
+
+// start blocked, home not empty: move blocking marker
+function unblockStart(play,on_start,target) {
+  return function(selected) {
+  return function() {
+  if (game.candidates.length===0) return; // ?? can happen on +-
+
+  if (play) {
+    broadcast(['unblockStart',game,on_start,target,selected]);
+  }
+
+  game.markers[game.current][on_start] = target;
+
+  game.attempts = [];
+  game.next = game.die===6
+       ? game.current
+       : game.colors[(game.colors.indexOf(game.current)+1)%game.colors.length];
+  casualties(target);
+  game.candidates = [];
+  game.last_selected = selected;
+  game.die           = 0;
+
+  drawBoard(skip,move(PLAY));
+} } }
+
+function moveOut(play) { return function(selected) {
+  return function() {
+  if (game.candidates.length===0) return; // ?? can happen on +-
+
+  if (play) {
+    broadcast(['moveOut',game,selected]);
+  }
+
+  // start free, home not empty: move out
+  game.home[game.current].pop();
+  target = game.homes[game.current];
+  game.markers[game.current].push(target);
+
+  game.attempts = [];
+  game.next = game.current;
+  casualties(target);
+  game.candidates = [];
+  game.last_selected = selected;
+  game.die           = 0;
+
+  drawBoard(skip,move(PLAY));
+} } }
+
+function moveSelectedMarker(play) { return function(selected) {
+  return function() {
+  if (game.candidates.length===0) return; // ?? can happen on +-
+
+  if (play) {
+    broadcast(['moveSelectedMarker',game,selected]);
+  }
+
+  var marker = game.markers[game.current].indexOf(selected);
+
+  target = (game.markers[game.current][marker]+game.die)%game.cycle;
+  if (target===game.homes[game.current]) {
+
+    game.markers[game.current].splice(marker,1);
+    game.done[game.current].push(3-game.done[game.current].length);
+    if (game.done[game.current].length===4) {
+
+      // all markers done, eliminate current color
+      game.next   = game.colors[(game.colors.indexOf(game.current)+1)%game.colors.length];
+      game.colors = game.colors.filter(function(c){return c!==game.current});
+
+    } else {
+
+      game.next = game.die===6
+           ? game.current
+           : game.colors[(game.colors.indexOf(game.current)+1)%game.colors.length];
+
+    }
+
+  } else {
+
+    game.markers[game.current][marker] = target;
+    game.next = game.die===6
+         ? game.current
+         : game.colors[(game.colors.indexOf(game.current)+1)%game.colors.length];
+
+  }
+
+  game.attempts = [];
+  casualties(target);
+  game.candidates = [];
+  game.last_selected = selected;
+  game.die           = 0;
+
+  drawBoard(skip,move(PLAY));
+} } }
+
+function move(play) {
+  return function() {
+  var on_start = -1, target = -1;
+
+  if (game.colors.length===0) return;
+
+  if (play) {
+    game.current = game.next;
+    throw_die();
+    broadcast(['move',game]);
+  }
+
+  game.last_selected = -1;
+
+  // any marker on start position?
+  on_start = game.markers[game.current].indexOf(game.homes[game.current]);
+
+  if (on_start>=0 && game.home[game.current].length>0
+   && game.markers[game.current].indexOf((game.homes[game.current]+game.die)%game.cycle)===-1) {
+
+    target = (game.markers[game.current][on_start]+game.die)%game.cycle;
+
+    game.candidates = [[-1,game.homes[game.current],target]];
+    drawBoard(unblockStart(PLAY,on_start,target)
+             ,unblockStart(PLAY,on_start,target)(game.homes[game.current]));
+
+  } else if (game.die===6) {
+
+    if (on_start<0 && game.home[game.current].length>0) {
+
+      game.candidates = [[-1,game.homes[game.current],game.homes[game.current]]];
+      drawBoard(moveOut(PLAY)
+               ,moveOut(PLAY)(game.homes[game.current]));
+
+    } else {
+
+      // no markers to move from home or start
+      if (game.markers[game.current].length>0) {
+
+        listCandidates();
+        drawBoard(moveSelectedMarker(PLAY)
+                 ,game.candidates.length===1
+                 ?moveSelectedMarker(PLAY)(game.candidates[0][1])
+                 :null);
+
+      } else {
+
+        // no markers in or out?
+        throw('no markers?');
+
+      }
+
+    }
+  } else {
+
+    if (game.markers[game.current].length>0) {
+
+      listCandidates();
+      drawBoard(moveSelectedMarker(PLAY)
+               ,game.candidates.length===1
+               ?moveSelectedMarker(PLAY)(game.candidates[0][1])
+               :null);
+
+    } else {
+
+      // no markers out
+      if (game.home[game.current].length>0) {
+
+        if (game.attempts.length < 2) {
+
+          // try again
+          game.attempts.push(game.die);
+          game.next = game.current;
+          // game.candidates = [] ??
+          drawBoard(skip,move(PLAY));
+
+        } else {
+
+          // can't move
+          game.next = game.colors[(game.colors.indexOf(game.current)+1)%game.colors.length];
+          game.attempts.push(game.die);
+          game.die = 0;
+          // game.candidates = [] ??
+          drawBoard(skip,move(PLAY));
+          game.attempts = [];
+
+        }
+
+      } else {
+
+        // no markers in or out?
+        throw('no markers?');
+
+      }
+
+    }
+  }
+} }
+
+document.addEventListener("keydown",keyHandler,false);
+window.onresize = function() { return drawBoard(game.move_,game.turn) };
+drawBoard(game.move_,game.turn);
+
+console.log(document.cookie);
+if (document.cookie.match(/relayserver=true/)) {
+
+  // we are one (of some) gameviewers,
+  // relay moves to server and listen for moves to replay
+  relayserver = true;
+  longpoll('/listen',replay);
+
+} else {
+
+  // we are on our own, just play on this one board view
+
+}
+
+</script>
+
+</body>
+</html>
